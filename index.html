@@ -1428,6 +1428,15 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- RESUMO HOJE -->
+  <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;background:linear-gradient(135deg,#0a1408,#0c160a);">
+    <div class="ch" style="border-color:#2a3a1a;">
+      <div class="ci" style="background:#0a1505;">📆</div>
+      <div><div class="ct" style="color:#84cc16;">Hoje</div><div class="cs">O que já saiu hoje vs. o que o histórico esperaria</div></div>
+    </div>
+    <div id="resumo-hoje" style="padding:8px;"></div>
+  </div>
+
   <!-- ASSISTENTE "ONDE ESTOU?" -->
   <div class="card" style="border-color:#1a3a4a;margin-bottom:10px;background:linear-gradient(135deg,#050e14,#081018);">
     <div class="ch" style="border-color:#1a3a4a;">
@@ -1513,6 +1522,7 @@ textarea:focus{border-color:var(--green)!important;}
           <div style="width:14px;height:10px;border-radius:2px;background:#ef4444;"></div>
         </div>
         <span style="font-size:0.46rem;color:var(--dim2);">Quente</span>
+        <span style="font-size:0.44rem;color:var(--dim2);margin-left:8px;">• = amostra &lt;3 dias</span>
       </div>
       <!-- Header horas -->
       <div style="display:grid;grid-template-columns:20px repeat(12,1fr);gap:2px;margin-bottom:3px;" id="heatmap-header"></div>
@@ -3621,7 +3631,7 @@ function atualizarPillsDia(prefixo, dia, corVar){
   estilo(btnHoje, dia==='hoje');
   estilo(btnOntem, dia==='ontem');
   const label = formatDiaLabel(dia);
-  aviso.innerHTML = label ? '📅 Este registo vai ficar guardado em: <b style="color:'+corVar+';">'+label+'</b>' : '';
+  aviso.innerHTML = label ? '<div style="margin-top:6px;padding:6px 8px;background:#3a1a0a;border:1.5px solid #f97316;border-radius:8px;font-size:0.5rem;color:#fdba74;font-weight:700;display:flex;align-items:center;gap:5px;">⚠️ A gravar como <span style="color:#fff;">'+label+'</span> — não "Hoje"!</div>' : '';
 }
 
 function setDiaTriplo(tipo){
@@ -7997,12 +8007,90 @@ function renderPadroes(){
   renderIntervalosDist();
   renderVisaoProfunda();
   safeRun(renderOndeEstou,'renderOndeEstou');
+  safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
   safeRun(renderNumerosFrios,'renderNumerosFrios');
   safeRun(renderHeatmapMes,'renderHeatmapMes');
   safeRun(renderResumoTurno,'renderResumoTurno');
   safeRun(renderRadarConvergencia,'renderRadarConvergencia');
   safeRun(function(){ if(typeof window.cpSugerirPadroes==='function') window.cpSugerirPadroes(); },'cpSugerirPadroes-auto');
+}
+
+// ══════════════════════════════════════════════
+//  RESUMO HOJE (o que já saiu hoje vs. padrão histórico)
+// ══════════════════════════════════════════════
+function renderResumoHoje(){
+  const el = document.getElementById('resumo-hoje');
+  if(!el) return;
+  const hojeKey = _diaKey(Date.now());
+  const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const hojeWd = new Date().getDay();
+
+  function deHoje(arr){ return arr.filter(function(e){ return e.ts && _diaKey(e.ts)===hojeKey; }); }
+  const tHoje = deHoje(S.triplos);
+  const qHoje = deHoje(S.quadras);
+
+  if(tHoje.length===0 && qHoje.length===0){
+    el.innerHTML = '<div class="empty">Ainda sem registos de hoje. Assim que registares, aparece aqui.</div>';
+    return;
+  }
+
+  function horasUnicas(arr){
+    return [...new Set(arr.map(function(e){ return e.hora ? parseInt(e.hora.split(':')[0]) : null; }).filter(function(h){return h!==null;}))].sort(function(a,b){return a-b;});
+  }
+  const horasT = horasUnicas(tHoje);
+  const horasQ = horasUnicas(qHoje);
+
+  // Top horas historicas (todo o historico) para comparar
+  function top5Historico(arr){
+    const f = {};
+    arr.forEach(function(e){ if(e.hora){ const h=parseInt(e.hora.split(':')[0]); f[h]=(f[h]||0)+1; } });
+    return Object.entries(f).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(p){return parseInt(p[0]);});
+  }
+  const top5T = top5Historico(S.triplos);
+  const top5Q = top5Historico(S.quadras);
+  const acertosQ = horasQ.filter(function(h){ return top5Q.indexOf(h)>=0; });
+
+  // Taxa do dia da semana de hoje (combinado T+Q), normalizado por dias distintos observados
+  const contWd = {}, diasWd = {};
+  for(let i=0;i<7;i++){ contWd[i]=0; diasWd[i]=new Set(); }
+  S.triplos.concat(S.quadras).forEach(function(e){
+    if(!e.ts) return;
+    const d = new Date(e.ts);
+    const wd = d.getDay();
+    contWd[wd]++;
+    diasWd[wd].add(_diaKey(e.ts));
+  });
+  const taxasWd = [];
+  for(let i=0;i<7;i++){ const nd=diasWd[i].size; taxasWd.push({wd:i, taxa: nd?contWd[i]/nd:0}); }
+  taxasWd.sort(function(a,b){return b.taxa-a.taxa;});
+  const rankHoje = taxasWd.findIndex(function(t){return t.wd===hojeWd;})+1;
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">'
+    +'<div style="background:#0a1408;border:1px solid #2a3a1a55;border-radius:9px;padding:8px;text-align:center;">'
+    +'<div style="font-size:0.44rem;color:var(--dim2);">TRIPLOS HOJE</div>'
+    +'<div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--green);">'+tHoje.length+'</div>'
+    +'<div style="font-size:0.4rem;color:var(--dim2);">'+(horasT.length?horasT.map(function(h){return pad(h)+'h';}).join(', '):'—')+'</div>'
+    +'</div>'
+    +'<div style="background:#0a1408;border:1px solid #2a3a1a55;border-radius:9px;padding:8px;text-align:center;">'
+    +'<div style="font-size:0.44rem;color:var(--dim2);">QUADRAS HOJE</div>'
+    +'<div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--gold);">'+qHoje.length+'</div>'
+    +'<div style="font-size:0.4rem;color:var(--dim2);">'+(horasQ.length?horasQ.map(function(h){return pad(h)+'h';}).join(', '):'—')+'</div>'
+    +'</div>'
+    +'</div>';
+
+  html += '<div style="background:#0a0a14;border-radius:8px;padding:8px 10px;font-size:0.48rem;color:var(--text);line-height:1.7;">';
+  html += '📅 Hoje é <b>'+diasSemana[hojeWd]+'</b> — historicamente é o dia nº <b>'+rankHoje+' de 7</b> em atividade (T+Q combinados).<br>';
+  if(qHoje.length){
+    html += acertosQ.length
+      ? '🎯 '+acertosQ.length+' das horas de quadra de hoje ('+acertosQ.map(function(h){return pad(h)+'h';}).join(', ')+') coincidem com as tuas '+top5Q.length+' horas historicamente mais fortes.'
+      : '📊 Nenhuma quadra de hoje caiu ainda numa das tuas horas historicamente mais fortes ('+top5Q.map(function(h){return pad(h)+'h';}).join(', ')+').';
+  } else {
+    html += '📊 Ainda sem quadra hoje. Horas historicamente mais fortes: '+top5Q.map(function(h){return pad(h)+'h';}).join(', ')+'.';
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
 }
 
 // ══════════════════════════════════════════════
@@ -9297,7 +9385,8 @@ function renderHeatmap(){
 
   // Build matrix: rows=numbers 1-6, cols=hours 0-23 (show only hours with data, max 12)
   const matrix = {}; // matrix[num][hour] = count
-  for(let n=1;n<=6;n++){ matrix[n]={}; }
+  const diasMatrix = {}; // diasMatrix[num][hour] = Set of day keys
+  for(let n=1;n<=6;n++){ matrix[n]={}; diasMatrix[n]={}; }
   let horasComDados = new Set();
 
   arr.forEach(t=>{
@@ -9307,6 +9396,10 @@ function renderHeatmap(){
     if(n>=1&&n<=6){
       matrix[n][h] = (matrix[n][h]||0)+1;
       horasComDados.add(h);
+      if(t.ts){
+        if(!diasMatrix[n][h]) diasMatrix[n][h] = new Set();
+        diasMatrix[n][h].add(_diaKey(t.ts));
+      }
     }
   });
 
@@ -9343,11 +9436,14 @@ function renderHeatmap(){
     row.innerHTML = `<div style="font-family:var(--font-mono);font-size:0.55rem;font-weight:700;color:var(--text);display:flex;align-items:center;justify-content:center;">${n}</div>`;
     horas.forEach(h=>{
       const v = matrix[n][h]||0;
+      const diasN = diasMatrix[n][h] ? diasMatrix[n][h].size : 0;
+      const covBaixa = v>0 && diasN<3;
       const cell = document.createElement('div');
       cell.className = 'heatcell';
-      cell.style.cssText = `background:${heatColor(v,maxVal)};height:22px;border:1px solid #1a2a1a22;`;
+      cell.style.cssText = `background:${heatColor(v,maxVal)};height:22px;border:1px solid #1a2a1a22;position:relative;opacity:${covBaixa?'0.55':'1'};`;
       if(v>0){
-        cell.innerHTML = `<div style="font-size:0.4rem;color:white;text-align:center;line-height:22px;font-weight:700;">${v}</div>`;
+        cell.innerHTML = `<div style="font-size:0.4rem;color:white;text-align:center;line-height:22px;font-weight:700;">${v}</div>`
+          + (covBaixa ? `<span style="position:absolute;top:0px;right:1px;font-size:0.32rem;">•</span>` : '');
         cell.onclick = ()=>showHeatDetail(n, h, v, arr);
       }
       row.appendChild(cell);
