@@ -15562,10 +15562,29 @@ function alarmeQuadrasRemoverHora(h){
   renderAlarmeQuadrasConfig();
 }
 
+function falarAlerta(texto){
+  try{
+    if(typeof speechSynthesis==='undefined') return;
+    if(localStorage.getItem('pro_voz_alertas')==='off') return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'pt-PT';
+    u.rate = 1;
+    u.volume = 1;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function toggleVozAlertas(){
+  const atual = localStorage.getItem('pro_voz_alertas')!=='off';
+  localStorage.setItem('pro_voz_alertas', atual?'off':'on');
+  if(!atual) falarAlerta('Alertas por voz ativados.');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
 function alarmeQuadrasDisparar(motivo){
   if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([200,100,200,100,200]);
   if(typeof playQuadra==='function') safeRun(playQuadra,'playQuadra-alarme');
   showToast('⏰ '+motivo,'gold');
+  falarAlerta('Atenção. Alarme de quadras. '+motivo);
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
     try{ new Notification('🟡 Alarme de Quadras', {body:motivo}); }catch(e){}
   }
@@ -15614,6 +15633,16 @@ function renderAlarmeQuadrasConfig(){
   }
 
   let html = '';
+
+  // Bloco 0: Voz
+  const vozAtiva = localStorage.getItem('pro_voz_alertas')!=='off';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🔊 Aviso falado (voz)</span>'
+    +toggleBtn(vozAtiva,'toggleVozAlertas()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Diz em voz alta quando o alarme de quadras dispara, ou quando o Sniper Mode aponta sinal forte de triplo/quadra.</div>'
+    +'</div>';
 
   // Bloco 1: Tempo sem sair
   html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
@@ -16023,12 +16052,14 @@ function renderSniperInstrucao(){
     sniperCalls.unshift({ts:Date.now(),urgencia:rT.urgencia,cor:rT.cor,instrucao:rT.instrucao,tipo:'triplo',resolved:false,resultado:null});
     saveSniperCalls();
     _sniperAlertar(rT.urgencia);
+    if(rT.urgencia>=3) falarAlerta('Atenção. Previsão forte de triplo. Score alto agora.');
   }
   _ultimaUrgenciaTriplo = rT.urgencia;
   if(rQ.urgencia>=2 && _ultimaUrgenciaQuadra<2){
     sniperCalls.unshift({ts:Date.now(),urgencia:rQ.urgencia,cor:rQ.cor,instrucao:rQ.instrucao,tipo:'quadra',resolved:false,resultado:null});
     saveSniperCalls();
     _sniperAlertar(rQ.urgencia);
+    if(rQ.urgencia>=3) falarAlerta('Atenção. Previsão forte de quadra. Score alto agora.');
   }
   _ultimaUrgenciaQuadra = rQ.urgencia;
   _ultimaUrgencia = Math.max(rT.urgencia, rQ.urgencia); // mantido para compatibilidade com leituras antigas
