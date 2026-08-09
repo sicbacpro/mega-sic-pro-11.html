@@ -16324,16 +16324,20 @@ function renderAll(){
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
 setInterval(()=>{
-  safeRun(renderTriplos,'renderTriplos');
-  safeRun(renderQuadras,'renderQuadras');
-  safeRun(renderDashboard,'renderDashboard');
-  safeRun(renderPadroes,'renderPadroes');
+  const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
+  if(ativa('page-dashboard')) safeRun(renderDashboard,'renderDashboard');
+  if(ativa('page-triplos')) safeRun(renderTriplos,'renderTriplos');
+  if(ativa('page-quadras')) safeRun(renderQuadras,'renderQuadras');
+  if(ativa('page-padroes')){
+    safeRun(renderPadroes,'renderPadroes');
+    safeRun(renderCicloDetector,'renderCicloDetector');
+    safeRun(renderPrevisao,'renderPrevisao');
+  }
+  if(ativa('page-turbo')) safeRun(renderTurboHist,'renderTurboHist');
+  if(ativa('page-planeador')) safeRun(renderPlaneador,'renderPlaneador');
+  // Estes são leves (verificações, não reconstroem listas grandes) — mantidos sempre a correr para os alertas funcionarem em qualquer página
   safeRun(checkPatternAlerts,'checkPatternAlerts');
   safeRun(checkConquistas,'checkConquistas');
-  safeRun(renderPlaneador,'renderPlaneador');
-  safeRun(renderCicloDetector,'renderCicloDetector');
-  safeRun(renderPrevisao,'renderPrevisao');
-  safeRun(renderTurboHist,'renderTurboHist');
 },5000);
 // Init turbo buttons
 safeRun(()=>setNow('turbo-hora'),'setNow');
