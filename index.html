@@ -1437,6 +1437,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="resumo-hoje" style="padding:8px;"></div>
   </div>
 
+  <!-- SESSAO GEMEA -->
+  <div class="card" style="border-color:#3a1a3a;margin-bottom:10px;background:linear-gradient(135deg,#12081a,#0e0a16);">
+    <div class="ch" style="border-color:#3a1a3a;">
+      <div class="ci" style="background:#170a1f;">🪞</div>
+      <div><div class="ct" style="color:#e879f9;">Sessão Gémea</div><div class="cs">O dia do teu histórico mais parecido com hoje</div></div>
+    </div>
+    <div id="sessao-gemea" style="padding:8px;"></div>
+  </div>
+
   <!-- ASSISTENTE "ONDE ESTOU?" -->
   <div class="card" style="border-color:#1a3a4a;margin-bottom:10px;background:linear-gradient(135deg,#050e14,#081018);">
     <div class="ch" style="border-color:#1a3a4a;">
@@ -1918,6 +1927,36 @@ textarea:focus{border-color:var(--green)!important;}
 <!-- fim aba minutos -->
 
 <div id="an-tab-hora" style="display:none;">
+
+  <!-- ALERTA CRUZADO DE CICLOS -->
+  <div id="alerta-cruzado-wrap"></div>
+
+  <!-- RADAR DA HORA DIARIA -->
+  <div class="card" style="border-color:#3a2a0a;margin-bottom:10px;background:linear-gradient(135deg,#1a1005,#140c04);">
+    <div class="ch" style="border-color:#3a2a0a;">
+      <div class="ci" style="background:#1a1005;">📡</div>
+      <div><div class="ct" style="color:var(--gold);">Radar da Hora Diária</div><div class="cs">A hora mais "fiel" — repete quase todos os dias</div></div>
+    </div>
+    <div id="radar-diaria" style="padding:8px;"></div>
+  </div>
+
+  <!-- DETECTOR DE CICLO POR HORA -->
+  <div class="card" style="border-color:#3a1a0a;margin-bottom:10px;background:linear-gradient(135deg,#180a04,#140805);">
+    <div class="ch" style="border-color:#3a1a0a;">
+      <div class="ci" style="background:#180a04;">🔁</div>
+      <div><div class="ct" style="color:var(--orange);">Detector de Ciclo por Hora</div><div class="cs">Quais horas tendem a repetir diariamente ou a cada 2-3 dias</div></div>
+    </div>
+    <div id="ciclo-hora" style="padding:8px;"></div>
+  </div>
+
+  <!-- CALENDARIO DE CICLOS -->
+  <div class="card" style="border-color:#1a2a3a;margin-bottom:10px;">
+    <div class="ch" style="border-color:#1a2a3a;">
+      <div class="ci" style="background:#051020;">📆</div>
+      <div><div class="ct" style="color:var(--blue);">Calendário de Ciclos</div><div class="cs">Últimos 14 dias — quando cada hora cíclica/diária saiu</div></div>
+    </div>
+    <div id="calendario-ciclos" style="padding:8px;overflow-x:auto;"></div>
+  </div>
 
   <!-- EXTRATO POR HORA -->
   <div class="card" style="border-color:#1a3a3a;margin-bottom:10px;">
@@ -8008,6 +8047,7 @@ function renderPadroes(){
   renderVisaoProfunda();
   safeRun(renderOndeEstou,'renderOndeEstou');
   safeRun(renderResumoHoje,'renderResumoHoje');
+  safeRun(renderSessaoGemea,'renderSessaoGemea');
   safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
   safeRun(renderNumerosFrios,'renderNumerosFrios');
   safeRun(renderHeatmapMes,'renderHeatmapMes');
@@ -8089,6 +8129,79 @@ function renderResumoHoje(){
     html += '📊 Ainda sem quadra hoje. Horas historicamente mais fortes: '+top5Q.map(function(h){return pad(h)+'h';}).join(', ')+'.';
   }
   html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  SESSAO GEMEA (dia mais parecido do historico)
+// ══════════════════════════════════════════════
+function renderSessaoGemea(){
+  const el = document.getElementById('sessao-gemea');
+  if(!el) return;
+
+  const hojeKey = _diaKey(Date.now());
+  const agora = new Date();
+  const minutosHoje = agora.getHours()*60+agora.getMinutes();
+
+  // Junta triplos+quadras com hora e dia, agrupados por dia
+  const todos = S.triplos.concat(S.quadras).filter(function(e){ return e.ts && e.hora; });
+  const porDia = {};
+  todos.forEach(function(e){
+    const dk = _diaKey(e.ts);
+    if(!porDia[dk]) porDia[dk] = [];
+    porDia[dk].push({ min: toMin(e.hora), tipo: (S.quadras.indexOf(e)>=0?'quadra':'triplo'), hora:e.hora });
+  });
+  Object.keys(porDia).forEach(function(dk){ porDia[dk].sort(function(a,b){return a.min-b.min;}); });
+
+  const eventosHoje = porDia[hojeKey] || [];
+  if(eventosHoje.length<2){
+    el.innerHTML = '<div class="empty">Ainda com poucos registos hoje para comparar. Volta mais tarde.</div>';
+    return;
+  }
+
+  // Assinatura de hoje: hora do 1º evento, nº eventos até agora, weekday
+  const primeiroHoje = eventosHoje[0].min;
+  const nEventosHoje = eventosHoje.filter(function(e){ return e.min<=minutosHoje; }).length;
+  const wdHoje = agora.getDay();
+
+  // Procura o dia mais parecido (excluindo hoje), só olhando para o mesmo "tempo decorrido"
+  let melhor = null, melhorDist = Infinity;
+  Object.keys(porDia).forEach(function(dk){
+    if(dk===hojeKey) return;
+    const evs = porDia[dk];
+    if(evs.length<2) return;
+    const primeiro = evs[0].min;
+    const nAteAgora = evs.filter(function(e){ return e.min<=minutosHoje; }).length;
+    const [ano,mes,dia] = dk.split('-').map(Number);
+    const dataDia = new Date(ano,mes,dia);
+    const wd = dataDia.getDay();
+    const distPrimeiro = Math.abs(primeiro-primeiroHoje)/60; // em horas
+    const distN = Math.abs(nAteAgora-nEventosHoje);
+    const bonusWd = (wd===wdHoje) ? -0.5 : 0;
+    const dist = distPrimeiro*1 + distN*1.5 + bonusWd;
+    if(dist<melhorDist){ melhorDist=dist; melhor={dk:dk, evs:evs, primeiro:primeiro, nAteAgora:nAteAgora, wd:wd, dataDia:dataDia}; }
+  });
+
+  if(!melhor){
+    el.innerHTML = '<div class="empty">Ainda não há dias suficientes no histórico para comparar.</div>';
+    return;
+  }
+
+  const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const dataFmt = pad(melhor.dataDia.getDate())+'/'+pad(melhor.dataDia.getMonth()+1);
+  const proximo = melhor.evs.find(function(e){ return e.min>minutosHoje; });
+
+  let html = '<div style="background:#0a0a14;border-radius:9px;padding:10px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
+  html += '🪞 O dia mais parecido com hoje é <b style="color:#e879f9;">'+dataFmt+'</b> ('+diasSemana[melhor.wd]+')'+(melhor.wd===wdHoje?' — mesmo dia da semana!':'')+'.<br>';
+  html += 'Nesse dia, o 1º evento foi às '+fromMin(melhor.primeiro)+' (hoje: '+fromMin(primeiroHoje)+'), e até esta hora já tinha '+melhor.nAteAgora+' eventos (hoje: '+nEventosHoje+').<br>';
+  if(proximo){
+    html += '➡️ A partir deste ponto, o próximo evento nesse dia foi um <b style="color:'+(proximo.tipo==='quadra'?'var(--gold)':'var(--green)')+';">'+proximo.tipo+'</b> às <b>'+proximo.hora+'</b>.';
+  } else {
+    html += '➡️ Nesse dia não houve mais eventos depois deste ponto.';
+  }
+  html += '</div>';
+  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ É o dia mais parecido que encontrámos, não uma previsão — serve como referência, não garantia.</div>';
 
   el.innerHTML = html;
 }
@@ -13566,6 +13679,177 @@ function renderGatilhoTriploQuadra(){
     +'</div>';
 }
 
+// ══════════════════════════════════════════════
+//  DETECTOR DE CICLO POR HORA (+ funções derivadas: Radar 06h, Calendário, Alerta Cruzado)
+// ══════════════════════════════════════════════
+function computarCiclosHora(){
+  const porHora = {};
+  S.quadras.forEach(function(e){
+    if(!e.hora || !e.ts) return;
+    const h = parseInt(e.hora.split(':')[0]);
+    const dk = _diaKey(e.ts);
+    if(!porHora[h]) porHora[h] = new Set();
+    porHora[h].add(dk);
+  });
+
+  const hojeD = new Date();
+  const hojeSemHora = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate());
+
+  const resultados = [];
+  for(let h=0;h<24;h++){
+    const diaKeys = porHora[h];
+    if(!diaKeys || diaKeys.size<5) continue;
+    const datas = Array.from(diaKeys).map(function(k){
+      const p = k.split('-').map(Number);
+      return new Date(p[0], p[1], p[2]);
+    }).sort(function(a,b){ return a-b; });
+    const gaps = [];
+    for(let i=1;i<datas.length;i++){ gaps.push(Math.round((datas[i]-datas[i-1])/86400000)); }
+    if(!gaps.length) continue;
+    const gap1 = gaps.filter(function(g){return g===1;}).length;
+    const gap23 = gaps.filter(function(g){return g===2||g===3;}).length;
+    const total = gaps.length;
+
+    let tipo, cicloTxt;
+    if(gap1/total>=0.4){ tipo='diaria'; cicloTxt='quase todos os dias'; }
+    else if(gap23/total>=0.45){ tipo='ciclica'; cicloTxt='a cada 2-3 dias'; }
+    else continue;
+
+    const ultima = datas[datas.length-1];
+    const diasDesde = Math.round((hojeSemHora-ultima)/86400000);
+    let status, cor, ordem;
+    if(tipo==='diaria'){
+      if(diasDesde===0){ status='Já saiu hoje ✓'; cor='var(--green)'; ordem=0; }
+      else if(diasDesde===1){ status='Ainda não saiu hoje — forte candidata'; cor='#fbbf24'; ordem=2; }
+      else { status='Atrasada há '+diasDesde+' dias (raro nesta hora)'; cor='#ef4444'; ordem=3; }
+    } else {
+      if(diasDesde<=1){ status='Saiu há '+diasDesde+' dia(s) — ainda dentro do ciclo'; cor='var(--green)'; ordem=0; }
+      else if(diasDesde<=3){ status='Dentro da janela normal (2-3 dias)'; cor='#fbbf24'; ordem=1; }
+      else { status='Atrasada há '+diasDesde+' dias (ciclo normal: 2-3)'; cor='#ef4444'; ordem=3; }
+    }
+    resultados.push({h:h, tipo:tipo, cicloTxt:cicloTxt, diasDesde:diasDesde, status:status, cor:cor, ordem:ordem, nDias:diaKeys.size, datas:datas});
+  }
+  return resultados;
+}
+
+function renderCicloPorHora(){
+  const el = document.getElementById('ciclo-hora');
+  if(!el) return;
+
+  const resultados = computarCiclosHora();
+  if(!resultados.length){
+    el.innerHTML = '<div class="empty">Ainda sem horas com amostra suficiente (mínimo 5 dias distintos) para detetar ciclo.</div>';
+    return;
+  }
+
+  resultados.slice().sort(function(a,b){ return b.ordem-a.ordem || b.diasDesde-a.diasDesde; });
+  const ordenados = resultados.slice().sort(function(a,b){ return b.ordem-a.ordem || b.diasDesde-a.diasDesde; });
+
+  let html = '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:7px;">🔴 Atrasada · 🟡 Candidata/dentro do ciclo · 🟢 Já dentro do esperado</div>';
+  html += ordenados.map(function(r){
+    const emoji = r.cor==='#ef4444'?'🔴':(r.cor==='#fbbf24'?'🟡':'🟢');
+    return '<div style="display:flex;align-items:center;gap:7px;background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
+      +'<span style="font-size:0.6rem;">'+emoji+'</span>'
+      +'<div style="flex:1;">'
+      +'<div style="font-family:var(--font-mono);font-size:0.68rem;font-weight:700;color:var(--text);">'+pad(r.h)+'h <span style="font-size:0.4rem;color:var(--dim2);font-weight:400;">('+r.cicloTxt+', '+r.nDias+' dias de amostra)</span></div>'
+      +'<div style="font-size:0.46rem;color:'+r.cor+';">'+r.status+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ Baseado em padrões passados de repetição — não garante que vai sair hoje.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  RADAR DA HORA DIARIA
+// ══════════════════════════════════════════════
+function renderRadarDiaria(){
+  const el = document.getElementById('radar-diaria');
+  if(!el) return;
+  const resultados = computarCiclosHora();
+  const diarias = resultados.filter(function(r){ return r.tipo==='diaria'; });
+  if(!diarias.length){
+    el.innerHTML = '<div class="empty">Ainda sem nenhuma hora com padrão "quase diário" detetado.</div>';
+    return;
+  }
+  diarias.sort(function(a,b){ return b.nDias-a.nDias; });
+  const r = diarias[0];
+  const emoji = r.cor==='#ef4444'?'🔴':(r.cor==='#fbbf24'?'🟡':'🟢');
+  el.innerHTML = '<div style="text-align:center;padding:6px 0;">'
+    +'<div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--gold);">'+pad(r.h)+'h</div>'
+    +'<div style="font-size:0.5rem;color:var(--dim2);margin-bottom:8px;">detetada em '+r.nDias+' dias distintos do teu histórico</div>'
+    +'<div style="font-size:0.7rem;">'+emoji+' <span style="color:'+r.cor+';font-weight:700;">'+r.status+'</span></div>'
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);text-align:center;margin-top:4px;">⚠️ Padrão passado, não garantia.</div>';
+}
+
+// ══════════════════════════════════════════════
+//  CALENDARIO DE CICLOS (ultimos 14 dias)
+// ══════════════════════════════════════════════
+function renderCalendarioCiclos(){
+  const el = document.getElementById('calendario-ciclos');
+  if(!el) return;
+  const resultados = computarCiclosHora();
+  if(!resultados.length){
+    el.innerHTML = '<div class="empty">Ainda sem horas com padrão suficiente para desenhar o calendário.</div>';
+    return;
+  }
+  resultados.sort(function(a,b){ return a.h-b.h; });
+
+  const hojeD = new Date();
+  const hojeSemHora = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate());
+  const dias = [];
+  for(let i=13;i>=0;i--){
+    dias.push(new Date(hojeSemHora.getFullYear(), hojeSemHora.getMonth(), hojeSemHora.getDate()-i));
+  }
+  function temNoDia(r, d){
+    return r.datas.some(function(dd){ return dd.getTime()===d.getTime(); });
+  }
+
+  let html = '<div style="display:grid;grid-template-columns:32px repeat(14,1fr);gap:2px;font-size:0.34rem;color:var(--dim2);margin-bottom:3px;">'
+    +'<div></div>'
+    +dias.map(function(d){ return '<div style="text-align:center;">'+pad(d.getDate())+'</div>'; }).join('')
+    +'</div>';
+  html += resultados.map(function(r){
+    const corBase = r.tipo==='diaria' ? '#f59e0b' : '#38bdf8';
+    return '<div style="display:grid;grid-template-columns:32px repeat(14,1fr);gap:2px;margin-bottom:2px;align-items:center;">'
+      +'<div style="font-family:var(--font-mono);font-size:0.42rem;color:var(--text);">'+pad(r.h)+'h</div>'
+      +dias.map(function(d){
+        const teve = temNoDia(r,d);
+        return '<div style="aspect-ratio:1;border-radius:2px;background:'+(teve?corBase:'#1a1a1a')+';"></div>';
+      }).join('')
+      +'</div>';
+  }).join('');
+  html += '<div style="display:flex;gap:10px;margin-top:6px;font-size:0.4rem;color:var(--dim2);">'
+    +'<span><span style="color:#f59e0b;">■</span> diária</span>'
+    +'<span><span style="color:#38bdf8;">■</span> cíclica (2-3d)</span>'
+    +'<span><span style="color:#1a1a1a;">■</span> não saiu</span>'
+    +'</div>';
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  ALERTA CRUZADO DE CICLOS
+// ══════════════════════════════════════════════
+function renderAlertaCruzadoCiclos(){
+  const wrap = document.getElementById('alerta-cruzado-wrap');
+  if(!wrap) return;
+  const resultados = computarCiclosHora();
+  const atrasadas = resultados.filter(function(r){ return r.cor==='#ef4444'; });
+  if(atrasadas.length<2){ wrap.innerHTML=''; return; }
+  atrasadas.sort(function(a,b){ return b.diasDesde-a.diasDesde; });
+  wrap.innerHTML = '<div class="card" style="border:1.5px solid #ef4444;margin-bottom:10px;background:linear-gradient(135deg,#2a0a0a,#1a0505);">'
+    +'<div style="padding:10px 12px;">'
+    +'<div style="font-size:0.58rem;font-weight:700;color:#ef4444;margin-bottom:4px;">🔀 Convergência de Ciclos</div>'
+    +'<div style="font-size:0.48rem;color:var(--text);line-height:1.6;">'+atrasadas.length+' horas com padrão conhecido estão todas atrasadas ao mesmo tempo: '
+    +atrasadas.map(function(r){ return '<b style="color:#ef4444;">'+pad(r.h)+'h</b> (há '+r.diasDesde+'d)'; }).join(', ')
+    +'. Historicamente, quando várias janelas se acumulam assim, tende a haver mais atividade em breve — mesmo sem se saber qual hora exata.'
+    +'</div>'
+    +'<div style="font-size:0.4rem;color:var(--dim2);margin-top:5px;">⚠️ Acumulação de atraso, não uma previsão garantida.</div>'
+    +'</div></div>';
+}
+
 function renderHora(){
   horaExtratoRender();
   horaMapaHoras();
@@ -13579,6 +13863,10 @@ function renderHora(){
   safeRun(renderMapaRepeticao,'renderMapaRepeticao');
   safeRun(renderGatilhoTriploQuadra,'renderGatilhoTriploQuadra');
   safeRun(renderSecaAntesQuadra,'renderSecaAntesQuadra');
+  safeRun(renderCicloPorHora,'renderCicloPorHora');
+  safeRun(renderRadarDiaria,'renderRadarDiaria');
+  safeRun(renderCalendarioCiclos,'renderCalendarioCiclos');
+  safeRun(renderAlertaCruzadoCiclos,'renderAlertaCruzadoCiclos');
 }
 
 function horaExtratoInitSelect(){
