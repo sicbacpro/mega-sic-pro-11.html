@@ -1387,6 +1387,15 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- DETETOR DE DUPLICADOS -->
+  <div class="card">
+    <div class="ch"><div class="ci" style="background:#150a1a;">🧹</div><div><div class="ct" style="color:#e879f9;">Detetor de Duplicados</div><div class="cs">Encontra registos repetidos (comum após importar JSON)</div></div></div>
+    <div style="padding:8px;">
+      <button class="btn btn-sm" style="background:#150a1a;border:1px solid #e879f944;color:#e879f9;width:100%;" onclick="detetarDuplicados()">🔍 Procurar Duplicados</button>
+      <div id="duplicados-resultado" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
   <!-- Limpar por categoria -->
   <div class="card">
     <div class="ch"><div class="ci" style="background:#1a0808;">🗑</div><div><div class="ct">Limpar Dados</div><div class="cs">Por categoria ou tudo de uma vez</div></div></div>
@@ -1444,6 +1453,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:#e879f9;">Sessão Gémea</div><div class="cs">O dia do teu histórico mais parecido com hoje</div></div>
     </div>
     <div id="sessao-gemea" style="padding:8px;"></div>
+  </div>
+
+  <!-- EXPLOSAO NOTURNA -->
+  <div class="card" style="border-color:#1a1a4a;margin-bottom:10px;background:linear-gradient(135deg,#0a0a1e,#080818);">
+    <div class="ch" style="border-color:#1a1a4a;">
+      <div class="ci" style="background:#0a0a20;">🌙</div>
+      <div><div class="ct" style="color:#818cf8;">Explosão Noturna</div><div class="cs">Manhã seca costuma compensar à noite?</div></div>
+    </div>
+    <div id="explosao-noturna" style="padding:8px;"></div>
   </div>
 
   <!-- ASSISTENTE "ONDE ESTOU?" -->
@@ -1938,6 +1956,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--gold);">Radar da Hora Diária</div><div class="cs">A hora mais "fiel" — repete quase todos os dias</div></div>
     </div>
     <div id="radar-diaria" style="padding:8px;"></div>
+  </div>
+
+  <!-- MAPA DE COMPANHIA -->
+  <div class="card" style="border-color:#0a3a2a;margin-bottom:10px;background:linear-gradient(135deg,#04140c,#04100a);">
+    <div class="ch" style="border-color:#0a3a2a;">
+      <div class="ci" style="background:#04140c;">👥</div>
+      <div><div class="ct" style="color:#34d399;">Mapa de Companhia</div><div class="cs">Depois desta quadra, qual a chance de vir outra em 30min?</div></div>
+    </div>
+    <div id="mapa-companhia" style="padding:8px;"></div>
   </div>
 
   <!-- DETECTOR DE CICLO POR HORA -->
@@ -5087,6 +5114,65 @@ function importarJSON(event){
   reader.readAsText(file);
   event.target.value='';
 }
+// ══════════════════════════════════════════════
+//  DETETOR DE DUPLICADOS
+// ══════════════════════════════════════════════
+function _encontrarDuplicados(arr){
+  const vistos = new Set();
+  const duplicadosIdx = [];
+  arr.forEach(function(e, i){
+    if(!e.ts || !e.hora) return;
+    const dk = _diaKey(e.ts);
+    const key = dk+'|'+e.hora+'|'+e.num;
+    if(vistos.has(key)){ duplicadosIdx.push(i); }
+    else { vistos.add(key); }
+  });
+  return duplicadosIdx;
+}
+function detetarDuplicados(){
+  const el = document.getElementById('duplicados-resultado');
+  if(!el) return;
+  const catsNomes = {triplos:'Triplos 🟢', quadras:'Quadras 🟡', duplos:'Duplos 🟣'};
+  const achados = {};
+  let totalDup = 0;
+  Object.keys(catsNomes).forEach(function(cat){
+    const idx = _encontrarDuplicados(S[cat]);
+    achados[cat] = idx;
+    totalDup += idx.length;
+  });
+
+  if(totalDup===0){
+    el.innerHTML = '<div class="empty" style="color:var(--green);">✅ Nenhum duplicado encontrado.</div>';
+    return;
+  }
+
+  let html = '<div style="background:#0a0a14;border-radius:8px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.7;margin-bottom:8px;">';
+  html += '⚠️ Encontrados <b style="color:#e879f9;">'+totalDup+'</b> registos duplicados (mesma data, hora e número):<br>';
+  Object.keys(catsNomes).forEach(function(cat){
+    if(achados[cat].length) html += '· '+catsNomes[cat]+': <b>'+achados[cat].length+'</b><br>';
+  });
+  html += '</div>';
+  html += '<button class="btn btn-sm" style="background:#2a0a0a;border:1px solid #ef444455;color:#ef4444;width:100%;" onclick="removerDuplicados()">🗑 Remover os '+totalDup+' Duplicados</button>';
+  el.innerHTML = html;
+  window._duplicadosAchados = achados;
+}
+function removerDuplicados(){
+  const achados = window._duplicadosAchados;
+  if(!achados) return;
+  mostrarConfirmacao(
+    'Remover os registos duplicados detetados? Esta ação não pode ser desfeita.',
+    function(){
+      Object.keys(achados).forEach(function(cat){
+        const idxSet = new Set(achados[cat]);
+        S[cat] = S[cat].filter(function(_, i){ return !idxSet.has(i); });
+        localStorage.setItem('pro_'+cat, JSON.stringify(S[cat]));
+      });
+      showToast('🧹 Duplicados removidos!','green');
+      setTimeout(function(){ location.reload(); },600);
+    }
+  );
+}
+
 function clearCategoria(cat){
   const nomes={triplos:'Triplos 🟢',quadras:'Quadras 🟡',duplos:'Duplos 🟣',fin:'Finanças 💰'};
   mostrarConfirmacao(
@@ -8048,6 +8134,7 @@ function renderPadroes(){
   safeRun(renderOndeEstou,'renderOndeEstou');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
+  safeRun(renderExplosaoNoturna,'renderExplosaoNoturna');
   safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
   safeRun(renderNumerosFrios,'renderNumerosFrios');
   safeRun(renderHeatmapMes,'renderHeatmapMes');
@@ -8202,6 +8289,59 @@ function renderSessaoGemea(){
   }
   html += '</div>';
   html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ É o dia mais parecido que encontrámos, não uma previsão — serve como referência, não garantia.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  EXPLOSAO NOTURNA (manha seca -> noite mais ativa?)
+// ══════════════════════════════════════════════
+function renderExplosaoNoturna(){
+  const el = document.getElementById('explosao-noturna');
+  if(!el) return;
+
+  const dupIdx = new Set(_encontrarDuplicados(S.quadras));
+  const unicos = S.quadras.filter(function(_,i){ return !dupIdx.has(i); });
+
+  const porDia = {};
+  unicos.forEach(function(e){
+    if(!e.ts || !e.hora) return;
+    const dk = _diaKey(e.ts);
+    const h = parseInt(e.hora.split(':')[0]);
+    if(!porDia[dk]) porDia[dk] = {manha:0, noite:0};
+    if(h>=4 && h<=11) porDia[dk].manha++;
+    if(h>=18 && h<=23) porDia[dk].noite++;
+  });
+  const dias = Object.values(porDia);
+  if(dias.length<10){
+    el.innerHTML = '<div class="empty">Ainda com poucos dias de histórico para testar esta ideia (mínimo 10 dias).</div>';
+    return;
+  }
+  const baixa = dias.filter(function(d){ return d.manha<=1; });
+  const alta = dias.filter(function(d){ return d.manha>=3; });
+  const media = function(arr, campo){ return arr.length ? arr.reduce(function(a,d){return a+d[campo];},0)/arr.length : 0; };
+  const mediaNoiteBaixa = media(baixa,'noite');
+  const mediaNoiteAlta = media(alta,'noite');
+  const mediaNoiteGeral = media(dias,'noite');
+
+  // Hoje
+  const hojeKey = _diaKey(Date.now());
+  const hojeD = new Date();
+  const hojeH = hojeD.getHours();
+  const manhaHoje = (porDia[hojeKey]||{manha:0}).manha;
+
+  let html = '<div style="background:#0a0a14;border-radius:9px;padding:10px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
+  html += '📊 Histórico ('+dias.length+' dias): manhã fraca (0-1 quadra) → média de <b style="color:#818cf8;">'+mediaNoiteBaixa.toFixed(2)+'</b> à noite. Manhã forte (3+) → <b>'+mediaNoiteAlta.toFixed(2)+'</b>. Média geral: '+mediaNoiteGeral.toFixed(2)+'.<br>';
+
+  if(hojeH<11){
+    html += '⏳ Ainda é de manhã (só '+manhaHoje+' quadra'+(manhaHoje===1?'':'s')+' até agora) — cedo para saber como vai a noite hoje.';
+  } else if(manhaHoje<=1){
+    html += '🌙 Hoje a manhã foi seca ('+manhaHoje+' quadra'+(manhaHoje===1?'':'s')+') — historicamente, nesses dias a noite tende a ser um pouco mais ativa. Vale ficar atenta a partir das 18h.';
+  } else {
+    html += '☀️ Hoje a manhã já teve '+manhaHoje+' quadras — dentro do normal ou forte, sem sinal de "compensação" à noite esperado.';
+  }
+  html += '</div>';
+  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ '+(baixa.length<10?'Amostra de dias com manhã fraca ainda pequena ('+baixa.length+' dias) — sinal fraco, a confirmar com mais dados.':'')+'</div>';
 
   el.innerHTML = html;
 }
@@ -13785,6 +13925,67 @@ function renderRadarDiaria(){
 }
 
 // ══════════════════════════════════════════════
+//  MAPA DE COMPANHIA (chance de vir outra quadra em 30min)
+// ══════════════════════════════════════════════
+function renderMapaCompanhia(){
+  const el = document.getElementById('mapa-companhia');
+  if(!el) return;
+
+  const dupIdx = new Set(_encontrarDuplicados(S.quadras));
+  const unicos = S.quadras.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts && e.hora; });
+  if(unicos.length<20){
+    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos para calcular isto com confiança.</div>';
+    return;
+  }
+
+  const porDia = {};
+  unicos.forEach(function(e){
+    const dk = _diaKey(e.ts);
+    if(!porDia[dk]) porDia[dk]=[];
+    porDia[dk].push({min:toMin(e.hora), hora:e.hora});
+  });
+
+  const totalPorHora = {}, hitPorHora = {};
+  Object.values(porDia).forEach(function(lst){
+    lst.sort(function(a,b){return a.min-b.min;});
+    for(let i=0;i<lst.length;i++){
+      const h = Math.floor(lst[i].min/60);
+      totalPorHora[h] = (totalPorHora[h]||0)+1;
+      if(i+1<lst.length && lst[i+1].min-lst[i].min<=30){
+        hitPorHora[h] = (hitPorHora[h]||0)+1;
+      }
+    }
+  });
+
+  // Ultima quadra registada (por ts mais recente)
+  const ultima = unicos.slice().sort(function(a,b){return b.ts-a.ts;})[0];
+  const hUltima = parseInt(ultima.hora.split(':')[0]);
+  const totH = totalPorHora[hUltima]||0;
+  const hitH = hitPorHora[hUltima]||0;
+  const pctH = totH>=5 ? Math.round(hitH/totH*100) : null;
+
+  const minutosDesde = Math.round((Date.now()-ultima.ts)/60000);
+
+  let html = '<div style="background:#0a0a14;border-radius:9px;padding:10px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
+  html += 'Última quadra registada: <b style="color:var(--gold);">'+ultima.hora+'</b> (número '+ultima.num+').<br>';
+  if(pctH!==null){
+    const cor = pctH>=30?'#ef4444':(pctH>=20?'#fbbf24':'var(--green)');
+    html += 'Quadras às <b>'+pad(hUltima)+'h</b> têm, historicamente, <b style="color:'+cor+';">'+pctH+'%</b> de chance de vir outra dentro de 30min ('+hitH+' de '+totH+' vezes).<br>';
+    if(minutosDesde<=30){
+      html += '⏱ Já passaram <b>'+minutosDesde+' min</b> desde essa quadra — ainda dentro da janela de 30min. Fica atenta!';
+    } else {
+      html += '⏱ Já passaram '+minutosDesde+' min — a janela de 30min já se fechou sem repetir esta vez.';
+    }
+  } else {
+    html += 'Ainda sem amostra suficiente para essa hora especificamente (mínimo 5 dias).';
+  }
+  html += '</div>';
+  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ Baseado em padrões passados — não garante nada, é só probabilidade histórica.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
 //  CALENDARIO DE CICLOS (ultimos 14 dias)
 // ══════════════════════════════════════════════
 function renderCalendarioCiclos(){
@@ -13865,6 +14066,7 @@ function renderHora(){
   safeRun(renderSecaAntesQuadra,'renderSecaAntesQuadra');
   safeRun(renderCicloPorHora,'renderCicloPorHora');
   safeRun(renderRadarDiaria,'renderRadarDiaria');
+  safeRun(renderMapaCompanhia,'renderMapaCompanhia');
   safeRun(renderCalendarioCiclos,'renderCalendarioCiclos');
   safeRun(renderAlertaCruzadoCiclos,'renderAlertaCruzadoCiclos');
 }
