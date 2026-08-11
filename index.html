@@ -1446,6 +1446,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="resumo-hoje" style="padding:8px;"></div>
   </div>
 
+  <!-- TERMOMETRO DO DIA -->
+  <div class="card" style="border-color:#3a0a0a;margin-bottom:10px;background:linear-gradient(135deg,#180404,#140404);">
+    <div class="ch" style="border-color:#3a0a0a;">
+      <div class="ci" style="background:#180404;">🌡️</div>
+      <div><div class="ct" style="color:#fb7185;">Termómetro do Dia</div><div class="cs">O jogo (total de triplos/dia) sobe e desce em ondas de poucos dias</div></div>
+    </div>
+    <div id="termometro-dia" style="padding:8px;"></div>
+  </div>
+
   <!-- SESSAO GEMEA -->
   <div class="card" style="border-color:#3a1a3a;margin-bottom:10px;background:linear-gradient(135deg,#12081a,#0e0a16);">
     <div class="ch" style="border-color:#3a1a3a;">
@@ -8133,6 +8142,7 @@ function renderPadroes(){
   renderVisaoProfunda();
   safeRun(renderOndeEstou,'renderOndeEstou');
   safeRun(renderResumoHoje,'renderResumoHoje');
+  safeRun(renderTermometroDia,'renderTermometroDia');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
   safeRun(renderExplosaoNoturna,'renderExplosaoNoturna');
   safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
@@ -8216,6 +8226,121 @@ function renderResumoHoje(){
     html += '📊 Ainda sem quadra hoje. Horas historicamente mais fortes: '+top5Q.map(function(h){return pad(h)+'h';}).join(', ')+'.';
   }
   html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  TERMOMETRO DO DIA (ondas de subida/descida no total diario)
+// ══════════════════════════════════════════════
+function renderTermometroDia(){
+  const el = document.getElementById('termometro-dia');
+  if(!el) return;
+
+  const dupIdx = new Set(_encontrarDuplicados(S.triplos));
+  const unicos = S.triplos.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts; });
+
+  const porDia = {};
+  unicos.forEach(function(e){
+    const dk = _diaKey(e.ts);
+    porDia[dk] = (porDia[dk]||0)+1;
+  });
+
+  // Reconstroi datas reais a partir das chaves, ordenadas
+  const chaves = Object.keys(porDia).map(function(k){
+    const p = k.split('-').map(Number);
+    return {key:k, data: new Date(p[0],p[1],p[2]), total: porDia[k]};
+  }).sort(function(a,b){ return a.data-b.data; });
+
+  if(chaves.length<10){
+    el.innerHTML = '<div class="empty">Ainda com poucos dias de histórico para detetar as ondas (mínimo 10 dias).</div>';
+    return;
+  }
+
+  // Encontra a maior sequencia de dias consecutivos (sem falhas), excluindo hoje (dado parcial)
+  const hojeKey = _diaKey(Date.now());
+  const semHoje = chaves.filter(function(c){ return c.key!==hojeKey; });
+
+  let melhorRun = [], runAtual = [semHoje[0]];
+  for(let i=1;i<semHoje.length;i++){
+    const diff = Math.round((semHoje[i].data-semHoje[i-1].data)/86400000);
+    if(diff===1){ runAtual.push(semHoje[i]); }
+    else { if(runAtual.length>melhorRun.length) melhorRun=runAtual; runAtual=[semHoje[i]]; }
+  }
+  if(runAtual.length>melhorRun.length) melhorRun=runAtual;
+
+  if(melhorRun.length<6){
+    el.innerHTML = '<div class="empty">Ainda sem uma sequência de dias seguidos suficiente (mínimo 6) para detetar o ciclo de ondas.</div>';
+    return;
+  }
+
+  // Deteta picos e vales locais
+  const picos=[], vales=[];
+  for(let i=1;i<melhorRun.length-1;i++){
+    const a=melhorRun[i-1].total, b=melhorRun[i].total, c=melhorRun[i+1].total;
+    if(b>a && b>c) picos.push(melhorRun[i]);
+    if(b<a && b<c) vales.push(melhorRun[i]);
+  }
+
+  const hojeD = new Date();
+  const hojeSemHora = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate());
+
+  let cicloMedio = 4;
+  if(picos.length>=2){
+    const gaps=[];
+    for(let i=1;i<picos.length;i++) gaps.push(Math.round((picos[i].data-picos[i-1].data)/86400000));
+    cicloMedio = gaps.reduce(function(a,b){return a+b;},0)/gaps.length;
+  }
+
+  const ultimoPico = picos.length ? picos[picos.length-1] : null;
+  const ultimoVale = vales.length ? vales[vales.length-1] : null;
+  const diasDesdePico = ultimoPico ? Math.round((hojeSemHora-ultimoPico.data)/86400000) : null;
+  const diasDesdeVale = ultimoVale ? Math.round((hojeSemHora-ultimoVale.data)/86400000) : null;
+
+  let status, cor;
+  if(diasDesdePico!==null && (diasDesdeVale===null || diasDesdePico<diasDesdeVale)){
+    // pico foi mais recente que o vale -> provavelmente a descer
+    if(diasDesdePico>=Math.round(cicloMedio/2)){
+      status = 'Já descemos há '+diasDesdePico+' dias desde o último pico — pode estar perto do fundo, atenção para uma possível virada para cima.';
+      cor='#fbbf24';
+    } else {
+      status = 'A descer desde o pico há '+diasDesdePico+' dia(s).';
+      cor='#ef4444';
+    }
+  } else if(diasDesdeVale!==null){
+    // vale mais recente -> provavelmente a subir
+    if(diasDesdeVale>=Math.round(cicloMedio/2)){
+      status = 'A subir há '+diasDesdeVale+' dias desde o último vale — pode estar perto do topo do ciclo.';
+      cor='#fbbf24';
+    } else {
+      status = 'A subir desde o vale há '+diasDesdeVale+' dia(s).';
+      cor='var(--green)';
+    }
+  } else {
+    status = 'Ainda a acumular dados para saber em que fase do ciclo estamos.';
+    cor='var(--dim2)';
+  }
+
+  const ultimos = melhorRun.slice(-10);
+  const maxV = Math.max.apply(null, ultimos.map(function(c){return c.total;}));
+
+  let html = '<div style="display:flex;align-items:flex-end;gap:3px;height:60px;margin-bottom:8px;">'
+    +ultimos.map(function(c){
+      const h = Math.max(4, Math.round(c.total/maxV*56));
+      const isPico = picos.indexOf(c)>=0, isVale = vales.indexOf(c)>=0;
+      const cor2 = isPico?'#ef4444':(isVale?'#4ade80':'#38bdf8');
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
+        +'<div style="width:100%;height:'+h+'px;background:'+cor2+';border-radius:2px 2px 0 0;"></div>'
+        +'<div style="font-size:0.32rem;color:var(--dim2);margin-top:2px;">'+pad(c.data.getDate())+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+
+  html += '<div style="background:#0a0a14;border-radius:9px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
+  html += '🌡️ Ciclo médio detetado: pico a cada <b>'+cicloMedio.toFixed(1)+' dias</b> (baseado em '+picos.length+' picos encontrados).<br>';
+  html += '<span style="color:'+cor+';font-weight:700;">'+status+'</span>';
+  html += '</div>';
+  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">🔴 pico · 🟢 vale · 🔵 normal &nbsp;|&nbsp; ⚠️ Padrão de ondas passado — não garante o dia de hoje.</div>';
 
   el.innerHTML = html;
 }
