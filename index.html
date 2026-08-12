@@ -1494,7 +1494,7 @@ textarea:focus{border-color:var(--green)!important;}
   <div class="card" style="border-color:#3a0a0a;margin-bottom:10px;background:linear-gradient(135deg,#180404,#140404);">
     <div class="ch" style="border-color:#3a0a0a;">
       <div class="ci" style="background:#180404;">🌡️</div>
-      <div><div class="ct" style="color:#fb7185;">Termómetro do Dia</div><div class="cs">O jogo (total de triplos/dia) sobe e desce em ondas de poucos dias</div></div>
+      <div><div class="ct" style="color:#fb7185;">Termómetro do Dia</div><div class="cs">Triplos + Quadras combinados sobem e descem juntos em ondas</div></div>
     </div>
     <div id="termometro-dia" style="padding:8px;"></div>
   </div>
@@ -8396,31 +8396,35 @@ function renderTermometroDia(){
   const el = document.getElementById('termometro-dia');
   if(!el) return;
 
-  const dupIdx = new Set(_encontrarDuplicados(S.triplos));
-  const unicos = S.triplos.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts; });
+  function contarPorDia(arr){
+    const dupIdx = new Set(_encontrarDuplicados(arr));
+    const unicos = arr.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts; });
+    const porDia = {};
+    unicos.forEach(function(e){
+      const dk = _diaKey(e.ts);
+      porDia[dk] = (porDia[dk]||0)+1;
+    });
+    return porDia;
+  }
+  const porDiaT = contarPorDia(S.triplos);
+  const porDiaQ = contarPorDia(S.quadras);
 
-  const porDia = {};
-  unicos.forEach(function(e){
-    const dk = _diaKey(e.ts);
-    porDia[dk] = (porDia[dk]||0)+1;
-  });
-
-  // Reconstroi datas reais a partir das chaves, ordenadas
-  const chaves = Object.keys(porDia).map(function(k){
-    const p = k.split('-').map(Number);
-    return {key:k, data: new Date(p[0],p[1],p[2]), total: porDia[k]};
-  }).sort(function(a,b){ return a.data-b.data; });
-
-  if(chaves.length<10){
+  const todasChaves = Array.from(new Set(Object.keys(porDiaT).concat(Object.keys(porDiaQ))));
+  if(todasChaves.length<10){
     el.innerHTML = '<div class="empty">Ainda com poucos dias de histórico para detetar as ondas (mínimo 10 dias).</div>';
     return;
   }
 
-  // Encontra a maior sequencia de dias consecutivos (sem falhas), excluindo hoje (dado parcial)
+  const chaves = todasChaves.map(function(k){
+    const p = k.split('-').map(Number);
+    return {key:k, data:new Date(p[0],p[1],p[2]), t:porDiaT[k]||0, q:porDiaQ[k]||0};
+  }).sort(function(a,b){ return a.data-b.data; });
+
+  // Encontra a maior sequencia de dias consecutivos, excluindo hoje (dado parcial)
   const hojeKey = _diaKey(Date.now());
   const semHoje = chaves.filter(function(c){ return c.key!==hojeKey; });
 
-  let melhorRun = [], runAtual = [semHoje[0]];
+  let melhorRun=[], runAtual=[semHoje[0]];
   for(let i=1;i<semHoje.length;i++){
     const diff = Math.round((semHoje[i].data-semHoje[i-1].data)/86400000);
     if(diff===1){ runAtual.push(semHoje[i]); }
@@ -8433,10 +8437,19 @@ function renderTermometroDia(){
     return;
   }
 
-  // Deteta picos e vales locais
+  // Normaliza cada serie pela sua propria media (para triplos e quadras pesarem por igual)
+  const mediaT = melhorRun.reduce(function(a,c){return a+c.t;},0)/melhorRun.length || 1;
+  const mediaQ = melhorRun.reduce(function(a,c){return a+c.q;},0)/melhorRun.length || 1;
+  melhorRun.forEach(function(c){
+    c.rt = mediaT ? c.t/mediaT : 0;
+    c.rq = mediaQ ? c.q/mediaQ : 0;
+    c.combo = (c.rt + c.rq)/2; // 1.0 = media, >1 quente, <1 frio
+  });
+
+  // Deteta picos e vales no indice combinado
   const picos=[], vales=[];
   for(let i=1;i<melhorRun.length-1;i++){
-    const a=melhorRun[i-1].total, b=melhorRun[i].total, c=melhorRun[i+1].total;
+    const a=melhorRun[i-1].combo, b=melhorRun[i].combo, c=melhorRun[i+1].combo;
     if(b>a && b>c) picos.push(melhorRun[i]);
     if(b<a && b<c) vales.push(melhorRun[i]);
   }
@@ -8444,7 +8457,7 @@ function renderTermometroDia(){
   const hojeD = new Date();
   const hojeSemHora = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate());
 
-  let cicloMedio = 4;
+  let cicloMedio = 3.5;
   if(picos.length>=2){
     const gaps=[];
     for(let i=1;i<picos.length;i++) gaps.push(Math.round((picos[i].data-picos[i-1].data)/86400000));
@@ -8458,7 +8471,6 @@ function renderTermometroDia(){
 
   let status, cor;
   if(diasDesdePico!==null && (diasDesdeVale===null || diasDesdePico<diasDesdeVale)){
-    // pico foi mais recente que o vale -> provavelmente a descer
     if(diasDesdePico>=Math.round(cicloMedio/2)){
       status = 'Já descemos há '+diasDesdePico+' dias desde o último pico — pode estar perto do fundo, atenção para uma possível virada para cima.';
       cor='#fbbf24';
@@ -8467,7 +8479,6 @@ function renderTermometroDia(){
       cor='#ef4444';
     }
   } else if(diasDesdeVale!==null){
-    // vale mais recente -> provavelmente a subir
     if(diasDesdeVale>=Math.round(cicloMedio/2)){
       status = 'A subir há '+diasDesdeVale+' dias desde o último vale — pode estar perto do topo do ciclo.';
       cor='#fbbf24';
@@ -8480,12 +8491,21 @@ function renderTermometroDia(){
     cor='var(--dim2)';
   }
 
+  // Concordancia: nos dias de pico/vale, triplos e quadras apontavam na mesma direcao?
+  const extremos = picos.concat(vales);
+  let concordam=0;
+  extremos.forEach(function(c){
+    const tAlto = c.rt>=1, qAlto = c.rq>=1;
+    if(tAlto===qAlto) concordam++;
+  });
+  const pctConcordancia = extremos.length ? Math.round(concordam/extremos.length*100) : null;
+
   const ultimos = melhorRun.slice(-10);
-  const maxV = Math.max.apply(null, ultimos.map(function(c){return c.total;}));
+  const maxV = Math.max.apply(null, ultimos.map(function(c){return c.combo;}));
 
   let html = '<div style="display:flex;align-items:flex-end;gap:3px;height:60px;margin-bottom:8px;">'
     +ultimos.map(function(c){
-      const h = Math.max(4, Math.round(c.total/maxV*56));
+      const h = Math.max(4, Math.round(c.combo/maxV*56));
       const isPico = picos.indexOf(c)>=0, isVale = vales.indexOf(c)>=0;
       const cor2 = isPico?'#ef4444':(isVale?'#4ade80':'#38bdf8');
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
@@ -8496,8 +8516,11 @@ function renderTermometroDia(){
     +'</div>';
 
   html += '<div style="background:#0a0a14;border-radius:9px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
-  html += '🌡️ Ciclo médio detetado: pico a cada <b>'+cicloMedio.toFixed(1)+' dias</b> (baseado em '+picos.length+' picos encontrados).<br>';
+  html += '🌡️ Índice combinado (triplos + quadras). Ciclo médio: pico a cada <b>'+cicloMedio.toFixed(1)+' dias</b> ('+picos.length+' picos encontrados).<br>';
   html += '<span style="color:'+cor+';font-weight:700;">'+status+'</span>';
+  if(pctConcordancia!==null){
+    html += '<br><span style="font-size:0.44rem;color:var(--dim2);">Triplos e quadras concordam em '+pctConcordancia+'% dos picos/vales detetados — '+(pctConcordancia>=70?'sinal sólido, sobem e descem juntos.':'sinal parcial, nem sempre se movem em conjunto.')+'</span>';
+  }
   html += '</div>';
   html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">🔴 pico · 🟢 vale · 🔵 normal &nbsp;|&nbsp; ⚠️ Padrão de ondas passado — não garante o dia de hoje.</div>';
 
