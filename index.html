@@ -917,6 +917,28 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- CALCULADORA DE POSICAO (TRIPLO) -->
+  <div class="card" style="border-color:#1a3a2a;margin-bottom:10px;">
+    <div class="ch" style="border-color:#1a3a2a;cursor:pointer;" onclick="const b=document.getElementById('calc-t-body'); if(b) b.style.display = b.style.display==='none'?'block':'none';">
+      <div class="ci" style="background:#051a10;">🧮</div>
+      <div><div class="ct" style="color:#34d399;">Calculadora de Posição</div><div class="cs">Descobre a hora sem contar casa a casa</div></div>
+    </div>
+    <div id="calc-t-body" style="display:none;padding:8px;">
+      <div class="form-grid fg3">
+        <div class="ff"><label>Hora do topo</label><input type="time" id="calc-t-topo" oninput="calcularPosicao('t')" style="font-size:0.62rem;padding:9px 4px;"></div>
+        <div class="ff"><label>Linha (1=topo)</label><input type="number" id="calc-t-linha" min="1" value="1" oninput="calcularPosicao('t')" class="big"></div>
+        <div class="ff"><label>Par</label>
+          <div style="display:flex;gap:4px;">
+            <button type="button" id="calc-t-esq" onclick="setParCalc('t','esq')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:var(--green)22;color:var(--green);font-size:0.48rem;">Esq.</button>
+            <button type="button" id="calc-t-dir" onclick="setParCalc('t','dir')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim2);font-size:0.48rem;">Dir.</button>
+          </div>
+        </div>
+      </div>
+      <div id="calc-t-resultado" style="text-align:center;margin:8px 0;font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--text);">—</div>
+      <button class="btn btn-sm" style="background:#051a10;border:1px solid #34d39944;color:#34d399;width:100%;" onclick="usarHoraCalculada('t')">✅ Usar esta hora</button>
+    </div>
+  </div>
+
   <!-- Registar -->
   <div class="card">
     <div class="ch"><div class="ci" style="background:var(--gd2);">🎯</div><div><div class="ct">Registar Triplo</div><div class="cs">Hora · número · aposta · ganho</div></div></div>
@@ -1093,6 +1115,28 @@ textarea:focus{border-color:var(--green)!important;}
       <div class="disclaimer" style="border-color:#3a2a08;">⚠ Padrão histórico. Não garante resultados futuros.</div>
     </div>
     <div id="q-tab-hist" style="display:none"><div id="q-hist"><div class="empty">Sem histórico.</div></div></div>
+  </div>
+
+  <!-- CALCULADORA DE POSICAO (QUADRA) -->
+  <div class="card" style="border-color:#3a2a08;margin-bottom:10px;">
+    <div class="ch" style="border-color:#3a2a08;cursor:pointer;" onclick="const b=document.getElementById('calc-q-body'); if(b) b.style.display = b.style.display==='none'?'block':'none';">
+      <div class="ci" style="background:#1a1204;">🧮</div>
+      <div><div class="ct" style="color:var(--gold);">Calculadora de Posição</div><div class="cs">Descobre a hora sem contar casa a casa</div></div>
+    </div>
+    <div id="calc-q-body" style="display:none;padding:8px;">
+      <div class="form-grid fg3">
+        <div class="ff"><label>Hora do topo</label><input type="time" id="calc-q-topo" oninput="calcularPosicao('q')" style="font-size:0.62rem;padding:9px 4px;"></div>
+        <div class="ff"><label>Linha (1=topo)</label><input type="number" id="calc-q-linha" min="1" value="1" oninput="calcularPosicao('q')" class="big"></div>
+        <div class="ff"><label>Par</label>
+          <div style="display:flex;gap:4px;">
+            <button type="button" id="calc-q-esq" onclick="setParCalc('q','esq')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gold);background:var(--gold)22;color:var(--gold);font-size:0.48rem;">Esq.</button>
+            <button type="button" id="calc-q-dir" onclick="setParCalc('q','dir')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim2);font-size:0.48rem;">Dir.</button>
+          </div>
+        </div>
+      </div>
+      <div id="calc-q-resultado" style="text-align:center;margin:8px 0;font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--text);">—</div>
+      <button class="btn btn-sm" style="background:#1a1204;border:1px solid var(--gold)44;color:var(--gold);width:100%;" onclick="usarHoraCalculada('q')">✅ Usar esta hora</button>
+    </div>
   </div>
 
   <div class="card gold-card">
@@ -5138,6 +5182,52 @@ function _encontrarDuplicados(arr){
   });
   return duplicadosIdx;
 }
+// ══════════════════════════════════════════════
+//  CALCULADORA DE POSICAO (hora sem contar casa a casa)
+// ══════════════════════════════════════════════
+let _calcPar = {t:'esq', q:'esq'};
+function setParCalc(prefix, lado){
+  _calcPar[prefix] = lado;
+  const esqBtn = document.getElementById('calc-'+prefix+'-esq');
+  const dirBtn = document.getElementById('calc-'+prefix+'-dir');
+  const corAtivo = prefix==='t' ? '#34d399' : 'var(--gold)';
+  function estilo(btn, ativo){
+    if(!btn) return;
+    btn.style.borderColor = ativo ? corAtivo : 'var(--border)';
+    btn.style.background = ativo ? corAtivo+'22' : 'transparent';
+    btn.style.color = ativo ? corAtivo : 'var(--dim2)';
+  }
+  estilo(esqBtn, lado==='esq');
+  estilo(dirBtn, lado==='dir');
+  calcularPosicao(prefix);
+}
+function calcularPosicao(prefix){
+  const topoEl = document.getElementById('calc-'+prefix+'-topo');
+  const linhaEl = document.getElementById('calc-'+prefix+'-linha');
+  const resEl = document.getElementById('calc-'+prefix+'-resultado');
+  if(!topoEl || !resEl) return null;
+  if(!topoEl.value){ resEl.textContent='—'; return null; }
+  const partes = topoEl.value.split(':').map(Number);
+  const hh = partes[0], mm = partes[1];
+  const linha = Math.max(1, parseInt(linhaEl.value)||1);
+  const lado = _calcPar[prefix]||'esq';
+  const minutosAtras = 2*(linha-1) + (lado==='dir'?1:0);
+  let totalMin = hh*60+mm - minutosAtras;
+  if(totalMin<0) totalMin += 1440;
+  const h2 = Math.floor(totalMin/60), m2 = totalMin%60;
+  const horaCalc = pad(h2)+':'+pad(m2);
+  resEl.textContent = horaCalc;
+  return horaCalc;
+}
+function usarHoraCalculada(prefix){
+  const horaCalc = calcularPosicao(prefix);
+  if(!horaCalc){ showToast('Define a hora do topo primeiro','red'); return; }
+  const targetId = prefix==='t' ? 't-hora' : 'q-hora';
+  const targetEl = document.getElementById(targetId);
+  if(targetEl) targetEl.value = horaCalc;
+  showToast('⏱ Hora '+horaCalc+' preenchida!','green');
+}
+
 function detetarDuplicados(){
   const el = document.getElementById('duplicados-resultado');
   if(!el) return;
