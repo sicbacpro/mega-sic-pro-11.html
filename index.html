@@ -2029,6 +2029,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="ciclo-hora" style="padding:8px;"></div>
   </div>
 
+  <!-- VALIDADOR DE PREVISOES -->
+  <div class="card" style="border-color:#0a3a2a;margin-bottom:10px;background:linear-gradient(135deg,#04140c,#04100a);">
+    <div class="ch" style="border-color:#0a3a2a;">
+      <div class="ci" style="background:#04140c;">🎯</div>
+      <div><div class="ct" style="color:#34d399;">Validador de Previsões</div><div class="cs">O Detector de Ciclo costuma acertar? Testado no teu histórico</div></div>
+    </div>
+    <div id="validador-previsoes" style="padding:8px;"></div>
+  </div>
+
   <!-- CALENDARIO DE CICLOS -->
   <div class="card" style="border-color:#1a2a3a;margin-bottom:10px;">
     <div class="ch" style="border-color:#1a2a3a;">
@@ -8392,10 +8401,7 @@ function renderResumoHoje(){
 // ══════════════════════════════════════════════
 //  TERMOMETRO DO DIA (ondas de subida/descida no total diario)
 // ══════════════════════════════════════════════
-function renderTermometroDia(){
-  const el = document.getElementById('termometro-dia');
-  if(!el) return;
-
+function calcularTermometro(){
   function contarPorDia(arr){
     const dupIdx = new Set(_encontrarDuplicados(arr));
     const unicos = arr.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts; });
@@ -8410,19 +8416,16 @@ function renderTermometroDia(){
   const porDiaQ = contarPorDia(S.quadras);
 
   const todasChaves = Array.from(new Set(Object.keys(porDiaT).concat(Object.keys(porDiaQ))));
-  if(todasChaves.length<10){
-    el.innerHTML = '<div class="empty">Ainda com poucos dias de histórico para detetar as ondas (mínimo 10 dias).</div>';
-    return;
-  }
+  if(todasChaves.length<10) return null;
 
   const chaves = todasChaves.map(function(k){
     const p = k.split('-').map(Number);
     return {key:k, data:new Date(p[0],p[1],p[2]), t:porDiaT[k]||0, q:porDiaQ[k]||0};
   }).sort(function(a,b){ return a.data-b.data; });
 
-  // Encontra a maior sequencia de dias consecutivos, excluindo hoje (dado parcial)
   const hojeKey = _diaKey(Date.now());
   const semHoje = chaves.filter(function(c){ return c.key!==hojeKey; });
+  if(!semHoje.length) return null;
 
   let melhorRun=[], runAtual=[semHoje[0]];
   for(let i=1;i<semHoje.length;i++){
@@ -8431,22 +8434,16 @@ function renderTermometroDia(){
     else { if(runAtual.length>melhorRun.length) melhorRun=runAtual; runAtual=[semHoje[i]]; }
   }
   if(runAtual.length>melhorRun.length) melhorRun=runAtual;
+  if(melhorRun.length<6) return null;
 
-  if(melhorRun.length<6){
-    el.innerHTML = '<div class="empty">Ainda sem uma sequência de dias seguidos suficiente (mínimo 6) para detetar o ciclo de ondas.</div>';
-    return;
-  }
-
-  // Normaliza cada serie pela sua propria media (para triplos e quadras pesarem por igual)
   const mediaT = melhorRun.reduce(function(a,c){return a+c.t;},0)/melhorRun.length || 1;
   const mediaQ = melhorRun.reduce(function(a,c){return a+c.q;},0)/melhorRun.length || 1;
   melhorRun.forEach(function(c){
     c.rt = mediaT ? c.t/mediaT : 0;
     c.rq = mediaQ ? c.q/mediaQ : 0;
-    c.combo = (c.rt + c.rq)/2; // 1.0 = media, >1 quente, <1 frio
+    c.combo = (c.rt + c.rq)/2;
   });
 
-  // Deteta picos e vales no indice combinado
   const picos=[], vales=[];
   for(let i=1;i<melhorRun.length-1;i++){
     const a=melhorRun[i-1].combo, b=melhorRun[i].combo, c=melhorRun[i+1].combo;
@@ -8469,29 +8466,28 @@ function renderTermometroDia(){
   const diasDesdePico = ultimoPico ? Math.round((hojeSemHora-ultimoPico.data)/86400000) : null;
   const diasDesdeVale = ultimoVale ? Math.round((hojeSemHora-ultimoVale.data)/86400000) : null;
 
-  let status, cor;
+  let status, cor, fase;
   if(diasDesdePico!==null && (diasDesdeVale===null || diasDesdePico<diasDesdeVale)){
     if(diasDesdePico>=Math.round(cicloMedio/2)){
       status = 'Já descemos há '+diasDesdePico+' dias desde o último pico — pode estar perto do fundo, atenção para uma possível virada para cima.';
-      cor='#fbbf24';
+      cor='#fbbf24'; fase='perto_fundo';
     } else {
       status = 'A descer desde o pico há '+diasDesdePico+' dia(s).';
-      cor='#ef4444';
+      cor='#ef4444'; fase='descida';
     }
   } else if(diasDesdeVale!==null){
     if(diasDesdeVale>=Math.round(cicloMedio/2)){
       status = 'A subir há '+diasDesdeVale+' dias desde o último vale — pode estar perto do topo do ciclo.';
-      cor='#fbbf24';
+      cor='#fbbf24'; fase='perto_topo';
     } else {
       status = 'A subir desde o vale há '+diasDesdeVale+' dia(s).';
-      cor='var(--green)';
+      cor='var(--green)'; fase='subida';
     }
   } else {
     status = 'Ainda a acumular dados para saber em que fase do ciclo estamos.';
-    cor='var(--dim2)';
+    cor='var(--dim2)'; fase=null;
   }
 
-  // Concordancia: nos dias de pico/vale, triplos e quadras apontavam na mesma direcao?
   const extremos = picos.concat(vales);
   let concordam=0;
   extremos.forEach(function(c){
@@ -8500,13 +8496,30 @@ function renderTermometroDia(){
   });
   const pctConcordancia = extremos.length ? Math.round(concordam/extremos.length*100) : null;
 
-  const ultimos = melhorRun.slice(-10);
+  return { melhorRun, picos, vales, cicloMedio, status, cor, fase, pctConcordancia, diasDesdePico, diasDesdeVale };
+}
+
+function renderTermometroDia(){
+  const el = document.getElementById('termometro-dia');
+  if(!el) return;
+
+  const r = calcularTermometro();
+  if(!r){
+    const dupIdx = new Set(_encontrarDuplicados(S.triplos));
+    const nDias = new Set(S.triplos.concat(S.quadras).filter(function(e){return e.ts;}).map(function(e){return _diaKey(e.ts);})).size;
+    el.innerHTML = nDias<10
+      ? '<div class="empty">Ainda com poucos dias de histórico para detetar as ondas (mínimo 10 dias).</div>'
+      : '<div class="empty">Ainda sem uma sequência de dias seguidos suficiente (mínimo 6) para detetar o ciclo de ondas.</div>';
+    return;
+  }
+
+  const ultimos = r.melhorRun.slice(-10);
   const maxV = Math.max.apply(null, ultimos.map(function(c){return c.combo;}));
 
   let html = '<div style="display:flex;align-items:flex-end;gap:3px;height:60px;margin-bottom:8px;">'
     +ultimos.map(function(c){
       const h = Math.max(4, Math.round(c.combo/maxV*56));
-      const isPico = picos.indexOf(c)>=0, isVale = vales.indexOf(c)>=0;
+      const isPico = r.picos.indexOf(c)>=0, isVale = r.vales.indexOf(c)>=0;
       const cor2 = isPico?'#ef4444':(isVale?'#4ade80':'#38bdf8');
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
         +'<div style="width:100%;height:'+h+'px;background:'+cor2+';border-radius:2px 2px 0 0;"></div>'
@@ -8516,15 +8529,39 @@ function renderTermometroDia(){
     +'</div>';
 
   html += '<div style="background:#0a0a14;border-radius:9px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
-  html += '🌡️ Índice combinado (triplos + quadras). Ciclo médio: pico a cada <b>'+cicloMedio.toFixed(1)+' dias</b> ('+picos.length+' picos encontrados).<br>';
-  html += '<span style="color:'+cor+';font-weight:700;">'+status+'</span>';
-  if(pctConcordancia!==null){
-    html += '<br><span style="font-size:0.44rem;color:var(--dim2);">Triplos e quadras concordam em '+pctConcordancia+'% dos picos/vales detetados — '+(pctConcordancia>=70?'sinal sólido, sobem e descem juntos.':'sinal parcial, nem sempre se movem em conjunto.')+'</span>';
+  html += '🌡️ Índice combinado (triplos + quadras). Ciclo médio: pico a cada <b>'+r.cicloMedio.toFixed(1)+' dias</b> ('+r.picos.length+' picos encontrados).<br>';
+  html += '<span style="color:'+r.cor+';font-weight:700;">'+r.status+'</span>';
+  if(r.pctConcordancia!==null){
+    html += '<br><span style="font-size:0.44rem;color:var(--dim2);">Triplos e quadras concordam em '+r.pctConcordancia+'% dos picos/vales detetados — '+(r.pctConcordancia>=70?'sinal sólido, sobem e descem juntos.':'sinal parcial, nem sempre se movem em conjunto.')+'</span>';
   }
   html += '</div>';
   html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">🔴 pico · 🟢 vale · 🔵 normal &nbsp;|&nbsp; ⚠️ Padrão de ondas passado — não garante o dia de hoje.</div>';
 
   el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  ALERTA DO TERMOMETRO (aviso quando entra em "perto do topo/fundo")
+// ══════════════════════════════════════════════
+function checkAlertaTermometro(){
+  const r = calcularTermometro();
+  if(!r || !r.fase) return;
+  if(r.fase!=='perto_topo' && r.fase!=='perto_fundo') return;
+
+  const hojeKey = _diaKey(Date.now());
+  const chaveAviso = 'pro_termometro_aviso_'+hojeKey+'_'+r.fase;
+  if(localStorage.getItem(chaveAviso)==='1') return; // já avisou hoje para esta fase
+
+  localStorage.setItem(chaveAviso, '1');
+  const msg = r.fase==='perto_topo'
+    ? '🌡️ Termómetro: perto do topo do ciclo!'
+    : '🌡️ Termómetro: perto do fundo do ciclo!';
+  showToast(msg, r.fase==='perto_topo'?'gold':'green');
+  falarAlerta(r.fase==='perto_topo' ? 'Atenção. O termómetro do dia está perto do topo do ciclo.' : 'Atenção. O termómetro do dia está perto do fundo do ciclo.');
+  if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([150,80,150,80,150]);
+  if(typeof Notification!=='undefined' && Notification.permission==='granted'){
+    try{ new Notification('🌡️ Termómetro do Dia', {body: r.status}); }catch(e){}
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -14179,6 +14216,63 @@ function computarCiclosHora(){
   return resultados;
 }
 
+// ══════════════════════════════════════════════
+//  VALIDADOR DE PREVISOES (taxa de acerto do Detector de Ciclo)
+// ══════════════════════════════════════════════
+function renderValidadorPrevisoes(){
+  const el = document.getElementById('validador-previsoes');
+  if(!el) return;
+
+  const resultados = computarCiclosHora();
+  if(!resultados.length){
+    el.innerHTML = '<div class="empty">Ainda sem horas com ciclo detetado para validar.</div>';
+    return;
+  }
+
+  const linhas = [];
+  let totalGaps=0, totalHits=0;
+
+  resultados.forEach(function(r){
+    const cicloEsperado = r.tipo==='diaria' ? 1 : 3; // limite superior da janela normal
+    const gaps = [];
+    for(let i=1;i<r.datas.length;i++){ gaps.push(Math.round((r.datas[i]-r.datas[i-1])/86400000)); }
+    const atrasos = gaps.filter(function(g){ return g>cicloEsperado; });
+    if(!atrasos.length) return; // esta hora nunca ficou "atrasada", nada para validar
+
+    const dentroDe1Extra = atrasos.filter(function(g){ return (g-cicloEsperado)<=1; }).length;
+    const pct = Math.round(dentroDe1Extra/atrasos.length*100);
+    totalGaps += atrasos.length;
+    totalHits += dentroDe1Extra;
+
+    linhas.push({h:r.h, tipo:r.tipo, n:atrasos.length, pct:pct});
+  });
+
+  if(!linhas.length){
+    el.innerHTML = '<div class="empty">Ainda sem casos suficientes de "atraso" no histórico para validar a taxa de acerto.</div>';
+    return;
+  }
+
+  linhas.sort(function(a,b){ return b.n-a.n; });
+  const pctGeral = totalGaps ? Math.round(totalHits/totalGaps*100) : null;
+
+  let html = '<div style="background:#0a0a14;border-radius:9px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.7;margin-bottom:8px;">';
+  html += '🎯 No geral, quando uma hora fica "atrasada", <b style="color:'+(pctGeral>=60?'var(--green)':'#fbbf24')+';">'+pctGeral+'%</b> das vezes ela sai no dia seguinte à janela esperada (baseado em '+totalGaps+' casos de atraso no histórico).';
+  html += '</div>';
+
+  html += linhas.map(function(l){
+    const cor = l.pct>=60?'var(--green)':(l.pct>=40?'#fbbf24':'#ef4444');
+    return '<div style="display:flex;align-items:center;gap:7px;background:#0a0a14;border-radius:8px;padding:6px 9px;margin-bottom:4px;">'
+      +'<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:var(--text);">'+pad(l.h)+'h</span>'
+      +'<span style="font-size:0.42rem;color:var(--dim2);flex:1;">'+(l.tipo==='diaria'?'diária':'cíclica')+' · '+l.n+' caso(s) de atraso</span>'
+      +'<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:'+cor+';">'+l.pct+'%</span>'
+      +'</div>';
+  }).join('');
+
+  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ Acerto = saiu até 1 dia depois do limite da janela esperada. Amostra ainda pequena para algumas horas — vai atualizando com mais dados.</div>';
+
+  el.innerHTML = html;
+}
+
 function renderCicloPorHora(){
   const el = document.getElementById('ciclo-hora');
   if(!el) return;
@@ -14372,6 +14466,7 @@ function renderHora(){
   safeRun(renderGatilhoTriploQuadra,'renderGatilhoTriploQuadra');
   safeRun(renderSecaAntesQuadra,'renderSecaAntesQuadra');
   safeRun(renderCicloPorHora,'renderCicloPorHora');
+  safeRun(renderValidadorPrevisoes,'renderValidadorPrevisoes');
   safeRun(renderRadarDiaria,'renderRadarDiaria');
   safeRun(renderMapaCompanhia,'renderMapaCompanhia');
   safeRun(renderCalendarioCiclos,'renderCalendarioCiclos');
@@ -17135,6 +17230,7 @@ setInterval(()=>{
   // Estes são leves (verificações, não reconstroem listas grandes) — mantidos sempre a correr para os alertas funcionarem em qualquer página
   safeRun(checkPatternAlerts,'checkPatternAlerts');
   safeRun(checkConquistas,'checkConquistas');
+  safeRun(checkAlertaTermometro,'checkAlertaTermometro');
 },5000);
 // Init turbo buttons
 safeRun(()=>setNow('turbo-hora'),'setNow');
