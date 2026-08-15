@@ -607,9 +607,31 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- TOGGLE MODO ESSENCIAL -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+    <button id="btn-modo-essencial" onclick="toggleModoEssencial()" style="font-size:0.44rem;padding:6px 12px;border-radius:20px;background:#0a0a14;border:1px solid var(--border);color:var(--dim2);cursor:pointer;">🎯 Modo Essencial</button>
+  </div>
+
   <!-- CONFIANCA DO DIA -->
-  <div class="card" id="card-confianca-dia" style="margin-bottom:10px;">
+  <div class="card" id="card-confianca-dia" data-essencial="1" style="margin-bottom:10px;">
     <div id="confianca-dia" style="padding:10px;"></div>
+  </div>
+
+  <!-- PROXIMA HORA FORTE (essencial) -->
+  <div class="card" id="card-proxima-forte" data-essencial="1" style="margin-bottom:10px;border-color:#3a1a0a;background:linear-gradient(135deg,#180a04,#140805);">
+    <div class="ch" style="border-color:#3a1a0a;">
+      <div class="ci" style="background:#180a04;">🔥</div>
+      <div><div class="ct" style="color:var(--orange);">Próxima Hora Forte</div><div class="cs">A hora mais "atrasada" com padrão conhecido</div></div>
+    </div>
+    <div id="proxima-hora-forte" style="padding:8px;"></div>
+  </div>
+
+  <!-- ATALHO REGISTO RAPIDO (essencial) -->
+  <div class="card" data-essencial="1" style="margin-bottom:10px;">
+    <div style="padding:10px;display:flex;gap:8px;">
+      <button class="btn btn-sm" style="flex:1;background:#0a1a10;border:1px solid var(--green);color:var(--green);" onclick="goPageDirect('turbo')">⚡ Grelha Rápida</button>
+      <button class="btn btn-sm" style="flex:1;background:#1a1204;border:1px solid var(--gold);color:var(--gold);" onclick="goPageDirect('quadras')">🟡 Registar Quadra</button>
+    </div>
   </div>
 
   <!-- FAVORITOS -->
@@ -1493,6 +1515,21 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:#60a5fa;">Relatório Semanal</div><div class="cs">Últimos 7 dias vs. os 7 anteriores</div></div>
     </div>
     <div id="relatorio-semanal" style="padding:8px;"></div>
+  </div>
+
+  <!-- COMPARACAO DE SEMANAS -->
+  <div class="card" style="border-color:#4a1a3a;margin-bottom:10px;background:linear-gradient(135deg,#180818,#140614);">
+    <div class="ch" style="border-color:#4a1a3a;">
+      <div class="ci" style="background:#180818;">📊</div>
+      <div><div class="ct" style="color:#e879f9;">Comparação de Semanas</div><div class="cs">Escolhe 2 semanas quaisquer e compara hora a hora</div></div>
+    </div>
+    <div style="padding:8px;">
+      <div class="form-grid fg2" style="margin-bottom:6px;">
+        <div class="ff"><label>Início Semana A</label><input type="date" id="comp-semana-a" oninput="renderComparacaoSemanas()" style="font-size:0.6rem;padding:8px 4px;"></div>
+        <div class="ff"><label>Início Semana B</label><input type="date" id="comp-semana-b" oninput="renderComparacaoSemanas()" style="font-size:0.6rem;padding:8px 4px;"></div>
+      </div>
+      <div id="comparacao-semanas-resultado"></div>
+    </div>
   </div>
 
   <!-- RESUMO HOJE -->
@@ -7945,6 +7982,52 @@ function renderConfiancaDia(){
   el.innerHTML = html;
 }
 
+// ══════════════════════════════════════════════
+//  PROXIMA HORA FORTE (compacto, para Dashboard/Modo Essencial)
+// ══════════════════════════════════════════════
+function renderProximaHoraForte(){
+  const el = document.getElementById('proxima-hora-forte');
+  if(!el || typeof computarCiclosHora!=='function') return;
+  const ciclos = computarCiclosHora();
+  if(!ciclos.length){
+    el.innerHTML = '<div class="empty">Ainda sem horas com ciclo detetado.</div>';
+    return;
+  }
+  const top = ciclos[0]; // ja vem ordenado com as mais atrasadas primeiro
+  const emoji = top.cor==='#ef4444'?'🔴':(top.cor==='#fbbf24'?'🟡':'🟢');
+  el.innerHTML = '<div style="text-align:center;padding:4px 0;">'
+    +'<div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--orange);">'+pad(top.h)+'h</div>'
+    +'<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:4px;">'+(top.tipo==='diaria'?'hora diária':'ciclo de 2-3 dias')+'</div>'
+    +'<div style="font-size:0.52rem;">'+emoji+' <span style="color:'+top.cor+';font-weight:700;">'+top.status+'</span></div>'
+    +'</div>';
+}
+
+// ══════════════════════════════════════════════
+//  MODO ESSENCIAL (esconde paineis analiticos no Dashboard)
+// ══════════════════════════════════════════════
+function applyModoEssencial(){
+  const ativo = localStorage.getItem('pro_modo_essencial')==='1';
+  const btn = document.getElementById('btn-modo-essencial');
+  if(btn){
+    btn.style.background = ativo ? 'var(--green)22' : '#0a0a14';
+    btn.style.borderColor = ativo ? 'var(--green)' : 'var(--border)';
+    btn.style.color = ativo ? 'var(--green)' : 'var(--dim2)';
+    btn.textContent = ativo ? '✅ Modo Essencial' : '🎯 Modo Essencial';
+  }
+  const pagina = document.getElementById('page-dashboard');
+  if(!pagina) return;
+  Array.prototype.forEach.call(pagina.children, function(child){
+    if(!child.classList || !child.classList.contains('card')) return;
+    if(child.getAttribute('data-essencial')==='1') return; // estes ficam sempre visiveis
+    child.style.display = ativo ? 'none' : '';
+  });
+}
+function toggleModoEssencial(){
+  const ativo = localStorage.getItem('pro_modo_essencial')==='1';
+  localStorage.setItem('pro_modo_essencial', ativo ? '0' : '1');
+  applyModoEssencial();
+}
+
 function renderDashboard(){
   const n = new Date();
   const h = n.getHours();
@@ -7959,6 +8042,8 @@ function renderDashboard(){
 
   renderTimers();
   safeRun(renderConfiancaDia,'renderConfiancaDia');
+  safeRun(renderProximaHoraForte,'renderProximaHoraForte');
+  safeRun(applyModoEssencial,'applyModoEssencial');
 
   const hoje = n.toISOString().slice(0,10);
   const tHoje = S.triplos.filter(t=>t.ts&&new Date(t.ts).toISOString().slice(0,10)===hoje);
@@ -8536,6 +8621,80 @@ function checkRelatorioSemanalAuto(){
   if(r.tSemana+r.qSemana===0) return;
   showToast('📬 Relatório Semanal disponível na Análise — '+r.tSemana+' triplos, '+r.qSemana+' quadras esta semana.','gold');
   falarAlerta('O relatório semanal está pronto. Esta semana: '+r.tSemana+' triplos e '+r.qSemana+' quadras.');
+}
+
+// ══════════════════════════════════════════════
+//  COMPARACAO DE SEMANAS (2 semanas quaisquer, hora a hora)
+// ══════════════════════════════════════════════
+function renderComparacaoSemanas(){
+  const el = document.getElementById('comparacao-semanas-resultado');
+  if(!el) return;
+  const inpA = document.getElementById('comp-semana-a');
+  const inpB = document.getElementById('comp-semana-b');
+  if(!inpA || !inpB || !inpA.value || !inpB.value){ el.innerHTML=''; return; }
+
+  const dupT = new Set(_encontrarDuplicados(S.triplos));
+  const dupQ = new Set(_encontrarDuplicados(S.quadras));
+  const tUnicos = S.triplos.filter(function(_,i){ return !dupT.has(i); }).filter(function(e){ return e.ts && e.hora; });
+  const qUnicos = S.quadras.filter(function(_,i){ return !dupQ.has(i); }).filter(function(e){ return e.ts && e.hora; });
+
+  function janela(arr, inicioStr){
+    const p = inicioStr.split('-').map(Number);
+    const ini = new Date(p[0], p[1]-1, p[2]);
+    const fim = new Date(ini.getTime()+6*86400000);
+    return arr.filter(function(e){
+      const d = new Date(e.ts);
+      const dd = new Date(d.getFullYear(),d.getMonth(),d.getDate());
+      return dd>=ini && dd<=fim;
+    });
+  }
+
+  const tA = janela(tUnicos, inpA.value), qA = janela(qUnicos, inpA.value);
+  const tB = janela(tUnicos, inpB.value), qB = janela(qUnicos, inpB.value);
+
+  function porHora(arr){
+    const c = {}; for(let h=0;h<24;h++) c[h]=0;
+    arr.forEach(function(e){ const h=parseInt(e.hora.split(':')[0]); c[h]++; });
+    return c;
+  }
+  const hT_A = porHora(tA), hT_B = porHora(tB), hQ_A = porHora(qA), hQ_B = porHora(qB);
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+    +'<div style="background:#0a0a14;border-radius:9px;padding:8px;text-align:center;">'
+    +'<div style="font-size:0.44rem;color:#e879f9;font-weight:700;">SEMANA A</div>'
+    +'<div style="font-size:0.44rem;color:var(--dim2);margin:2px 0;">'+inpA.value+'</div>'
+    +'<div style="font-size:0.5rem;color:var(--green);">🟢 '+tA.length+'</div>'
+    +'<div style="font-size:0.5rem;color:var(--gold);">🟡 '+qA.length+'</div>'
+    +'</div>'
+    +'<div style="background:#0a0a14;border-radius:9px;padding:8px;text-align:center;">'
+    +'<div style="font-size:0.44rem;color:#38bdf8;font-weight:700;">SEMANA B</div>'
+    +'<div style="font-size:0.44rem;color:var(--dim2);margin:2px 0;">'+inpB.value+'</div>'
+    +'<div style="font-size:0.5rem;color:var(--green);">🟢 '+tB.length+'</div>'
+    +'<div style="font-size:0.5rem;color:var(--gold);">🟡 '+qB.length+'</div>'
+    +'</div>'
+    +'</div>';
+
+  // Grafico hora a hora, barras opostas (A cima, B baixo) para triplos+quadras combinados
+  const comboA = {}, comboB = {};
+  for(let h=0;h<24;h++){ comboA[h]=hT_A[h]+hQ_A[h]; comboB[h]=hT_B[h]+hQ_B[h]; }
+  const maxV = Math.max.apply(null, Object.values(comboA).concat(Object.values(comboB)).concat([1]));
+
+  html += '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:4px;">Comparação por hora (T+Q combinados) — <span style="color:#e879f9;">■ A</span> vs <span style="color:#38bdf8;">■ B</span></div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(24,1fr);gap:1px;height:70px;align-items:flex-end;">';
+  for(let h=0;h<24;h++){
+    const ha = Math.max(2, Math.round(comboA[h]/maxV*32));
+    const hb = Math.max(2, Math.round(comboB[h]/maxV*32));
+    html += '<div style="display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
+      +'<div style="width:100%;height:'+ha+'px;background:#e879f9;"></div>'
+      +'<div style="width:100%;height:'+hb+'px;background:#38bdf8;margin-top:1px;"></div>'
+      +'</div>';
+  }
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(24,1fr);gap:1px;margin-top:2px;">';
+  for(let h=0;h<24;h+=3){ html += '<div style="grid-column:span 3;font-size:0.3rem;color:var(--dim2);text-align:left;">'+pad(h)+'h</div>'; }
+  html += '</div>';
+
+  el.innerHTML = html;
 }
 
 function renderResumoHoje(){
