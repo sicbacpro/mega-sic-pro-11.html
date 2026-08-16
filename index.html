@@ -612,6 +612,15 @@ textarea:focus{border-color:var(--green)!important;}
     <button id="btn-modo-essencial" onclick="toggleModoEssencial()" style="font-size:0.44rem;padding:6px 12px;border-radius:20px;background:#0a0a14;border:1px solid var(--border);color:var(--dim2);cursor:pointer;">🎯 Modo Essencial</button>
   </div>
 
+  <!-- SELETOR DE TURNO -->
+  <div style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;" id="turno-pills">
+    <button onclick="setTurno('todos')" data-turno="todos" style="flex:1;white-space:nowrap;padding:7px 6px;border-radius:8px;font-size:0.44rem;font-weight:700;background:var(--card2);border:1px solid var(--border);color:var(--dim2);">🌐 Todos</button>
+    <button onclick="setTurno('madrugada')" data-turno="madrugada" style="flex:1;white-space:nowrap;padding:7px 6px;border-radius:8px;font-size:0.44rem;font-weight:700;background:var(--card2);border:1px solid var(--border);color:var(--dim2);">🌑 Madrugada</button>
+    <button onclick="setTurno('manha')" data-turno="manha" style="flex:1;white-space:nowrap;padding:7px 6px;border-radius:8px;font-size:0.44rem;font-weight:700;background:var(--card2);border:1px solid var(--border);color:var(--dim2);">🌅 Manhã</button>
+    <button onclick="setTurno('tarde')" data-turno="tarde" style="flex:1;white-space:nowrap;padding:7px 6px;border-radius:8px;font-size:0.44rem;font-weight:700;background:var(--card2);border:1px solid var(--border);color:var(--dim2);">☀️ Tarde</button>
+    <button onclick="setTurno('noite')" data-turno="noite" style="flex:1;white-space:nowrap;padding:7px 6px;border-radius:8px;font-size:0.44rem;font-weight:700;background:var(--card2);border:1px solid var(--border);color:var(--dim2);">🌙 Noite</button>
+  </div>
+
   <!-- CONFIANCA DO DIA -->
   <div class="card" id="card-confianca-dia" data-essencial="1" style="margin-bottom:10px;">
     <div id="confianca-dia" style="padding:10px;"></div>
@@ -621,9 +630,14 @@ textarea:focus{border-color:var(--green)!important;}
   <div class="card" id="card-proxima-forte" data-essencial="1" style="margin-bottom:10px;border-color:#3a1a0a;background:linear-gradient(135deg,#180a04,#140805);">
     <div class="ch" style="border-color:#3a1a0a;">
       <div class="ci" style="background:#180a04;">🔥</div>
-      <div><div class="ct" style="color:var(--orange);">Próxima Hora Forte</div><div class="cs">A hora mais "atrasada" com padrão conhecido</div></div>
+      <div><div class="ct" style="color:var(--orange);">Próxima Hora Forte</div><div class="cs">Quadras (ciclo) e Triplos (mais forte ainda por sair hoje)</div></div>
     </div>
-    <div id="proxima-hora-forte" style="padding:8px;"></div>
+    <div style="padding:8px;">
+      <div style="font-size:0.44rem;color:var(--gold);font-weight:700;margin-bottom:3px;">🟡 QUADRAS</div>
+      <div id="proxima-hora-forte" style="margin-bottom:10px;"></div>
+      <div style="font-size:0.44rem;color:var(--green);font-weight:700;margin-bottom:3px;">🟢 TRIPLOS</div>
+      <div id="proxima-hora-forte-triplo"></div>
+    </div>
   </div>
 
   <!-- ATALHO REGISTO RAPIDO (essencial) -->
@@ -7902,17 +7916,51 @@ renderQuadras = function(){
 // ══════════════════════════════════════════════
 //  CONFIANCA DO DIA (semaforo combinando varios sinais)
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  MODO TURNO (filtra Confianca/Proxima Hora/Termometro por periodo do dia)
+// ══════════════════════════════════════════════
+let turnoAtual = localStorage.getItem('pro_turno_atual') || 'todos';
+const TURNO_RANGES = { madrugada:[0,3], manha:[4,11], tarde:[12,17], noite:[18,23] };
+function horaNoTurno(h, turno){
+  if(!turno || turno==='todos') return true;
+  const r = TURNO_RANGES[turno];
+  if(!r) return true;
+  return h>=r[0] && h<=r[1];
+}
+function syncTurnoPills(){
+  const pills = document.getElementById('turno-pills');
+  if(!pills) return;
+  pills.querySelectorAll('button').forEach(function(b){
+    const ativo = b.getAttribute('data-turno')===turnoAtual;
+    b.style.background = ativo ? 'var(--cyan)22' : 'var(--card2)';
+    b.style.borderColor = ativo ? 'var(--cyan)' : 'var(--border)';
+    b.style.color = ativo ? 'var(--cyan)' : 'var(--dim2)';
+  });
+}
+function setTurno(t){
+  turnoAtual = t;
+  localStorage.setItem('pro_turno_atual', t);
+  syncTurnoPills();
+  safeRun(renderConfiancaDia,'renderConfiancaDia-turno');
+  safeRun(renderProximaHoraForte,'renderProximaHoraForte-turno');
+  safeRun(renderProximaHoraForteTriplo,'renderProximaHoraForteTriplo-turno');
+}
+
 function renderConfiancaDia(){
   const el = document.getElementById('confianca-dia');
   if(!el) return;
 
   const sinais = [];
+  const turnoNomes = {madrugada:'madrugada',manha:'manhã',tarde:'tarde',noite:'noite'};
+  const sufixoTurno = turnoAtual!=='todos' ? ' (só '+turnoNomes[turnoAtual]+')' : '';
 
-  // Sinal 1: dia da semana esta entre os 3 mais fortes (T+Q combinado, normalizado por dia)
+  // Sinal 1: dia da semana esta entre os 3 mais fortes (T+Q combinado, normalizado por dia, filtrado por turno)
   const contWd = {}, diasWd = {};
   for(let i=0;i<7;i++){ contWd[i]=0; diasWd[i]=new Set(); }
   S.triplos.concat(S.quadras).forEach(function(e){
-    if(!e.ts) return;
+    if(!e.ts || !e.hora) return;
+    const h = parseInt(e.hora.split(':')[0]);
+    if(!horaNoTurno(h, turnoAtual)) return;
     const d = new Date(e.ts);
     contWd[d.getDay()]++;
     diasWd[d.getDay()].add(_diaKey(e.ts));
@@ -7924,12 +7972,12 @@ function renderConfiancaDia(){
   const rankHoje = taxasWd.findIndex(function(t){return t.wd===hojeWd;})+1;
   const diasSemana = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
   if(rankHoje>0 && rankHoje<=3){
-    sinais.push({favoravel:true, texto:'Hoje ('+diasSemana[hojeWd]+') é um dos 3 dias mais fortes da semana (nº'+rankHoje+' de 7).'});
+    sinais.push({favoravel:true, texto:'Hoje ('+diasSemana[hojeWd]+') é um dos 3 dias mais fortes da semana'+sufixoTurno+' (nº'+rankHoje+' de 7).'});
   } else if(rankHoje>0){
-    sinais.push({favoravel:false, texto:'Hoje ('+diasSemana[hojeWd]+') é um dia historicamente mais calmo (nº'+rankHoje+' de 7).'});
+    sinais.push({favoravel:false, texto:'Hoje ('+diasSemana[hojeWd]+') é um dia historicamente mais calmo'+sufixoTurno+' (nº'+rankHoje+' de 7).'});
   }
 
-  // Sinal 2: Termometro - fase favoravel (subida/perto_topo) em pelo menos uma das series
+  // Sinal 2: Termometro - fase favoravel (subida/perto_topo) em pelo menos uma das series (sempre dia inteiro)
   const term = calcularTermometro();
   if(term){
     const fasesFav = ['subida','perto_topo'];
@@ -7942,14 +7990,14 @@ function renderConfiancaDia(){
     }
   }
 
-  // Sinal 3: pelo menos 1 hora atualmente "atrasada" no Detector de Ciclo (candidata forte)
+  // Sinal 3: pelo menos 1 hora atualmente "atrasada" no Detector de Ciclo, dentro do turno escolhido
   if(typeof computarCiclosHora==='function'){
-    const ciclos = computarCiclosHora();
+    const ciclos = computarCiclosHora().filter(function(r){ return horaNoTurno(r.h, turnoAtual); });
     const atrasadas = ciclos.filter(function(r){ return r.cor==='#ef4444'; });
     if(atrasadas.length>0){
-      sinais.push({favoravel:true, texto: atrasadas.length+' hora(s) com padrão conhecido estão "atrasadas" — candidatas fortes: '+atrasadas.map(function(r){return pad(r.h)+'h';}).join(', ')+'.'});
+      sinais.push({favoravel:true, texto: atrasadas.length+' hora(s) com padrão conhecido estão "atrasadas"'+sufixoTurno+' — candidatas fortes: '+atrasadas.map(function(r){return pad(r.h)+'h';}).join(', ')+'.'});
     } else {
-      sinais.push({favoravel:false, texto:'Nenhuma hora com padrão conhecido está atrasada neste momento.'});
+      sinais.push({favoravel:false, texto:'Nenhuma hora com padrão conhecido está atrasada'+sufixoTurno+' neste momento.'});
     }
   }
 
@@ -7988,9 +8036,9 @@ function renderConfiancaDia(){
 function renderProximaHoraForte(){
   const el = document.getElementById('proxima-hora-forte');
   if(!el || typeof computarCiclosHora!=='function') return;
-  const ciclos = computarCiclosHora();
+  const ciclos = computarCiclosHora().filter(function(r){ return horaNoTurno(r.h, turnoAtual); });
   if(!ciclos.length){
-    el.innerHTML = '<div class="empty">Ainda sem horas com ciclo detetado.</div>';
+    el.innerHTML = '<div class="empty">Ainda sem horas com ciclo detetado'+(turnoAtual!=='todos'?' neste turno':'')+'.</div>';
     return;
   }
   const top = ciclos[0]; // ja vem ordenado com as mais atrasadas primeiro
@@ -7999,6 +8047,56 @@ function renderProximaHoraForte(){
     +'<div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--orange);">'+pad(top.h)+'h</div>'
     +'<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:4px;">'+(top.tipo==='diaria'?'hora diária':'ciclo de 2-3 dias')+'</div>'
     +'<div style="font-size:0.52rem;">'+emoji+' <span style="color:'+top.cor+';font-weight:700;">'+top.status+'</span></div>'
+    +'</div>';
+}
+
+// ══════════════════════════════════════════════
+//  PROXIMA HORA FORTE - TRIPLOS (sem ciclo real; usa "mais forte ainda por sair hoje")
+// ══════════════════════════════════════════════
+function renderProximaHoraForteTriplo(){
+  const el = document.getElementById('proxima-hora-forte-triplo');
+  if(!el) return;
+
+  const dupIdx = new Set(_encontrarDuplicados(S.triplos));
+  const unicos = S.triplos.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts && e.hora; });
+
+  const freq = {}, diasPorHora = {};
+  for(let h=0;h<24;h++){ freq[h]=0; diasPorHora[h]=new Set(); }
+  unicos.forEach(function(e){
+    const h = parseInt(e.hora.split(':')[0]);
+    if(!horaNoTurno(h, turnoAtual)) return;
+    freq[h]++;
+    diasPorHora[h].add(_diaKey(e.ts));
+  });
+
+  const hojeKey = _diaKey(Date.now());
+  const jaSaiuHoje = {};
+  for(let h=0;h<24;h++) jaSaiuHoje[h]=false;
+  unicos.forEach(function(e){
+    if(_diaKey(e.ts)!==hojeKey) return;
+    const h = parseInt(e.hora.split(':')[0]);
+    jaSaiuHoje[h]=true;
+  });
+
+  const ranking = [];
+  for(let h=0;h<24;h++){
+    const dias = diasPorHora[h].size;
+    if(dias<5) continue; // amostra minima para ser fiavel
+    ranking.push({h:h, taxa: freq[h]/dias, dias:dias, jaSaiu: jaSaiuHoje[h]});
+  }
+  if(!ranking.length){
+    el.innerHTML = '<div class="empty">Ainda sem amostra suficiente'+(turnoAtual!=='todos'?' neste turno':'')+'.</div>';
+    return;
+  }
+  ranking.sort(function(a,b){ return b.taxa-a.taxa; });
+
+  const aindaNaoSaiu = ranking.filter(function(r){ return !r.jaSaiu; });
+  const alvo = aindaNaoSaiu.length ? aindaNaoSaiu[0] : ranking[0];
+
+  el.innerHTML = '<div style="text-align:center;padding:4px 0;">'
+    +'<div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--green);">'+pad(alvo.h)+'h</div>'
+    +'<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:4px;">força '+alvo.taxa.toFixed(1)+'/dia · '+alvo.dias+' dias de amostra</div>'
+    +'<div style="font-size:0.52rem;color:'+(alvo.jaSaiu?'#fbbf24':'var(--green)')+';font-weight:700;">'+(alvo.jaSaiu?'⚠️ já saiu hoje (era a mais forte de todas)':'✅ ainda não saiu hoje')+'</div>'
     +'</div>';
 }
 
@@ -8043,7 +8141,9 @@ function renderDashboard(){
   renderTimers();
   safeRun(renderConfiancaDia,'renderConfiancaDia');
   safeRun(renderProximaHoraForte,'renderProximaHoraForte');
+  safeRun(renderProximaHoraForteTriplo,'renderProximaHoraForteTriplo');
   safeRun(applyModoEssencial,'applyModoEssencial');
+  safeRun(syncTurnoPills,'syncTurnoPills');
 
   const hoje = n.toISOString().slice(0,10);
   const tHoje = S.triplos.filter(t=>t.ts&&new Date(t.ts).toISOString().slice(0,10)===hoje);
