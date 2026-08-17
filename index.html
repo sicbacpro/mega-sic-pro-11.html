@@ -1546,6 +1546,33 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- HORAS DA SEMANA ATUAL -->
+  <div class="card" style="border-color:#1a3a3a;margin-bottom:10px;">
+    <div class="ch" style="border-color:#1a3a3a;">
+      <div class="ci" style="background:#051515;">🗓️</div>
+      <div><div class="ct" style="color:var(--cyan);">Horas da Semana Atual</div><div class="cs">Quais horas deram mais nos últimos 7 dias</div></div>
+    </div>
+    <div id="horas-semana-atual" style="padding:8px;"></div>
+  </div>
+
+  <!-- MUDANCA DE PADRAO -->
+  <div class="card" style="border-color:#3a2a0a;margin-bottom:10px;background:linear-gradient(135deg,#180f04,#140c04);">
+    <div class="ch" style="border-color:#3a2a0a;">
+      <div class="ci" style="background:#180f04;">🔄</div>
+      <div><div class="ct" style="color:#fbbf24;">Mudança de Padrão</div><div class="cs">Horas muito mais/menos fortes esta semana do que o normal</div></div>
+    </div>
+    <div id="mudanca-padrao" style="padding:8px;"></div>
+  </div>
+
+  <!-- ROTACAO DE HORAS -->
+  <div class="card" style="border-color:#2a1a4a;margin-bottom:10px;background:linear-gradient(135deg,#0e081a,#0a0614);">
+    <div class="ch" style="border-color:#2a1a4a;">
+      <div class="ci" style="background:#0e081a;">📔</div>
+      <div><div class="ct" style="color:#a78bfa;">Rotação de Horas</div><div class="cs">Top horas de cada semana, ao longo do tempo</div></div>
+    </div>
+    <div id="rotacao-horas" style="padding:8px;"></div>
+  </div>
+
   <!-- RESUMO HOJE -->
   <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;background:linear-gradient(135deg,#0a1408,#0c160a);">
     <div class="ch" style="border-color:#2a3a1a;">
@@ -8593,6 +8620,9 @@ function renderPadroes(){
   renderVisaoProfunda();
   safeRun(renderOndeEstou,'renderOndeEstou');
   safeRun(renderRelatorioSemanal,'renderRelatorioSemanal');
+  safeRun(renderHorasSemanaAtual,'renderHorasSemanaAtual');
+  safeRun(renderMudancaPadrao,'renderMudancaPadrao');
+  safeRun(renderRotacaoHoras,'renderRotacaoHoras');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderTermometroDia,'renderTermometroDia');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
@@ -8793,6 +8823,181 @@ function renderComparacaoSemanas(){
   html += '<div style="display:grid;grid-template-columns:repeat(24,1fr);gap:1px;margin-top:2px;">';
   for(let h=0;h<24;h+=3){ html += '<div style="grid-column:span 3;font-size:0.3rem;color:var(--dim2);text-align:left;">'+pad(h)+'h</div>'; }
   html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function _dedupUnicos(arr){
+  const dupIdx = new Set(_encontrarDuplicados(arr));
+  return arr.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts && e.hora; });
+}
+
+// ══════════════════════════════════════════════
+//  HORAS DA SEMANA ATUAL
+// ══════════════════════════════════════════════
+function renderHorasSemanaAtual(){
+  const el = document.getElementById('horas-semana-atual');
+  if(!el) return;
+
+  const hojeD = new Date(); const hojeSemHora = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate());
+  const inicio = new Date(hojeSemHora.getTime()-6*86400000);
+
+  function topHorasSemana(arr){
+    const unicos = _dedupUnicos(arr).filter(function(e){
+      const d = new Date(e.ts); const dd = new Date(d.getFullYear(),d.getMonth(),d.getDate());
+      return dd>=inicio && dd<=hojeSemHora;
+    });
+    const freq = {};
+    unicos.forEach(function(e){ const h=parseInt(e.hora.split(':')[0]); freq[h]=(freq[h]||0)+1; });
+    return Object.entries(freq).map(function(p){ return {h:parseInt(p[0]), n:p[1]}; }).sort(function(a,b){return b.n-a.n;}).slice(0,5);
+  }
+
+  const topT = topHorasSemana(S.triplos);
+  const topQ = topHorasSemana(S.quadras);
+
+  if(!topT.length && !topQ.length){
+    el.innerHTML = '<div class="empty">Ainda sem registos nos últimos 7 dias.</div>';
+    return;
+  }
+
+  function listaHTML(top, cor){
+    if(!top.length) return '<div style="font-size:0.44rem;color:var(--dim2);">Sem dados suficientes.</div>';
+    return top.map(function(r,i){
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+        +'<span style="font-size:0.5rem;">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.')+'</span>'
+        +'<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:'+cor+';">'+pad(r.h)+'h</span>'
+        +'<span style="font-size:0.44rem;color:var(--dim2);">'+r.n+'x esta semana</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  html += '<div><div style="font-size:0.44rem;color:var(--green);font-weight:700;margin-bottom:4px;">🟢 TRIPLOS</div>'+listaHTML(topT,'var(--green)')+'</div>';
+  html += '<div><div style="font-size:0.44rem;color:var(--gold);font-weight:700;margin-bottom:4px;">🟡 QUADRAS</div>'+listaHTML(topQ,'var(--gold)')+'</div>';
+  html += '</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">Período: '+pad(inicio.getDate())+'/'+pad(inicio.getMonth()+1)+' a '+pad(hojeSemHora.getDate())+'/'+pad(hojeSemHora.getMonth()+1)+'</div>';
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  MUDANCA DE PADRAO (semana atual vs media historica, por hora)
+// ══════════════════════════════════════════════
+function renderMudancaPadrao(){
+  const el = document.getElementById('mudanca-padrao');
+  if(!el) return;
+
+  const hojeD = new Date(); const hojeSemHora = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate());
+  const inicioSemana = new Date(hojeSemHora.getTime()-6*86400000);
+
+  function analisar(arr){
+    const unicos = _dedupUnicos(arr);
+    const semanaAtual = unicos.filter(function(e){ const d=new Date(e.ts); const dd=new Date(d.getFullYear(),d.getMonth(),d.getDate()); return dd>=inicioSemana && dd<=hojeSemHora; });
+    const historico = unicos.filter(function(e){ const d=new Date(e.ts); const dd=new Date(d.getFullYear(),d.getMonth(),d.getDate()); return dd<inicioSemana; });
+
+    const freqSemana={}, freqHist={}, diasHist={};
+    for(let h=0;h<24;h++){ freqSemana[h]=0; freqHist[h]=0; diasHist[h]=new Set(); }
+    semanaAtual.forEach(function(e){ freqSemana[parseInt(e.hora.split(':')[0])]++; });
+    historico.forEach(function(e){ const h=parseInt(e.hora.split(':')[0]); freqHist[h]++; diasHist[h].add(_diaKey(e.ts)); });
+
+    const achados = [];
+    for(let h=0;h<24;h++){
+      const diasH = diasHist[h].size;
+      if(diasH<10) continue; // amostra historica minima
+      const taxaHist = freqHist[h]/diasH;
+      const taxaSemana = freqSemana[h]/7;
+      if(taxaHist<0.3) continue; // hora praticamente irrelevante historicamente, ignora
+      const ratio = taxaSemana/taxaHist;
+      if(ratio>=2){ achados.push({h:h, ratio:ratio, tipo:'alta', taxaHist:taxaHist, taxaSemana:taxaSemana}); }
+      else if(ratio<=0.4 && taxaHist>=0.7){ achados.push({h:h, ratio:ratio, tipo:'baixa', taxaHist:taxaHist, taxaSemana:taxaSemana}); }
+    }
+    achados.sort(function(a,b){ return (b.tipo==='alta'?b.ratio:1/b.ratio) - (a.tipo==='alta'?a.ratio:1/a.ratio); });
+    return achados;
+  }
+
+  const achadosT = analisar(S.triplos).slice(0,4);
+  const achadosQ = analisar(S.quadras).slice(0,4);
+
+  if(!achadosT.length && !achadosQ.length){
+    el.innerHTML = '<div class="empty">Sem mudanças significativas detetadas esta semana — está tudo dentro do normal.</div>';
+    return;
+  }
+
+  function linha(a, nome){
+    const emoji = a.tipo==='alta' ? '📈' : '📉';
+    const cor = a.tipo==='alta' ? 'var(--green)' : '#ef4444';
+    const vezes = a.tipo==='alta' ? a.ratio.toFixed(1)+'x mais forte' : Math.round((1-a.ratio)*100)+'% mais fraca';
+    return '<div style="display:flex;gap:6px;align-items:center;background:#0a0a14;border-radius:8px;padding:6px 9px;margin-bottom:4px;">'
+      +'<span style="font-size:0.55rem;">'+emoji+'</span>'
+      +'<span style="font-family:var(--font-mono);font-size:0.58rem;font-weight:700;color:var(--text);">'+pad(a.h)+'h</span>'
+      +'<span style="font-size:0.42rem;color:'+cor+';flex:1;">'+nome+' '+vezes+' que o normal esta semana</span>'
+      +'</div>';
+  }
+
+  let html = achadosT.map(function(a){ return linha(a,'🟢 Triplos —'); }).join('')
+    + achadosQ.map(function(a){ return linha(a,'🟡 Quadras —'); }).join('');
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">⚠️ Compara a taxa/dia desta semana com a média histórica (mín. 10 dias de amostra). Pode ser sinal de rotação — ou só coincidência de amostra pequena (7 dias).</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  ROTACAO DE HORAS (top horas por semana, ao longo do tempo)
+// ══════════════════════════════════════════════
+function renderRotacaoHoras(){
+  const el = document.getElementById('rotacao-horas');
+  if(!el) return;
+
+  const tUnicos = _dedupUnicos(S.triplos);
+  const qUnicos = _dedupUnicos(S.quadras);
+
+  function inicioSemanaDe(d){
+    const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    dd.setDate(dd.getDate()-dd.getDay()); // recua ate domingo
+    return dd;
+  }
+
+  const hojeD = new Date();
+  const inicioSemanaAtual = inicioSemanaDe(hojeD);
+
+  function agruparPorSemana(arr){
+    const porSemana = {};
+    arr.forEach(function(e){
+      const d = new Date(e.ts);
+      const ini = inicioSemanaDe(d);
+      if(ini.getTime()>=inicioSemanaAtual.getTime()) return; // ignora semana atual (incompleta)
+      const key = ini.getTime();
+      if(!porSemana[key]) porSemana[key] = {ini:ini, freq:{}};
+      const h = parseInt(e.hora.split(':')[0]);
+      porSemana[key].freq[h] = (porSemana[key].freq[h]||0)+1;
+    });
+    return porSemana;
+  }
+
+  const semanasT = agruparPorSemana(tUnicos);
+  const semanasQ = agruparPorSemana(qUnicos);
+  const todasChaves = Array.from(new Set(Object.keys(semanasT).concat(Object.keys(semanasQ)))).sort(function(a,b){return b-a;}).slice(0,8);
+
+  if(!todasChaves.length){
+    el.innerHTML = '<div class="empty">Ainda sem uma semana completa no histórico para começar o diário.</div>';
+    return;
+  }
+
+  function top3(freq){
+    return Object.entries(freq||{}).map(function(p){return {h:parseInt(p[0]),n:p[1]};}).sort(function(a,b){return b.n-a.n;}).slice(0,3).map(function(r){return pad(r.h)+'h';}).join(', ');
+  }
+
+  let html = todasChaves.map(function(key){
+    const ini = new Date(parseInt(key));
+    const fim = new Date(ini.getTime()+6*86400000);
+    const tTop = semanasT[key] ? top3(semanasT[key].freq) : '—';
+    const qTop = semanasQ[key] ? top3(semanasQ[key].freq) : '—';
+    return '<div style="background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
+      +'<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:3px;">'+pad(ini.getDate())+'/'+pad(ini.getMonth()+1)+' a '+pad(fim.getDate())+'/'+pad(fim.getMonth()+1)+'</div>'
+      +'<div style="font-size:0.46rem;color:var(--green);">🟢 '+tTop+'</div>'
+      +'<div style="font-size:0.46rem;color:var(--gold);">🟡 '+qTop+'</div>'
+      +'</div>';
+  }).join('');
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Compara as horas de semana para semana — se repetirem, é padrão fixo; se mudarem sempre, é rotação.</div>';
 
   el.innerHTML = html;
 }
