@@ -1573,6 +1573,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="rotacao-horas" style="padding:8px;"></div>
   </div>
 
+  <!-- SEMANA IDEAL -->
+  <div class="card" style="border-color:#4a3a0a;margin-bottom:10px;background:linear-gradient(135deg,#180f04,#140c04);">
+    <div class="ch" style="border-color:#4a3a0a;">
+      <div class="ci" style="background:#180f04;">🌟</div>
+      <div><div class="ct" style="color:var(--gold);">Semana Ideal</div><div class="cs">A melhor semana do teu histórico, e o que teve de diferente</div></div>
+    </div>
+    <div id="semana-ideal" style="padding:8px;"></div>
+  </div>
+
   <!-- RESUMO HOJE -->
   <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;background:linear-gradient(135deg,#0a1408,#0c160a);">
     <div class="ch" style="border-color:#2a3a1a;">
@@ -4552,6 +4561,37 @@ let minFiltroPeriodo = 'tudo'; // tudo | 30d
 let _minUltimoAlertaMinuto = null;
 let histFiltroDuplos  = null;
 
+function _confiancaHistoricaData(){
+  const contWd={}, diasWd={};
+  for(let i=0;i<7;i++){ contWd[i]=0; diasWd[i]=new Set(); }
+  const todosUnicos = _dedupUnicos(S.triplos).concat(_dedupUnicos(S.quadras));
+  const porDiaISO = {};
+  todosUnicos.forEach(function(e){
+    const dIso = new Date(e.ts).toISOString().slice(0,10);
+    porDiaISO[dIso] = (porDiaISO[dIso]||0)+1;
+    const wd = new Date(e.ts).getDay();
+    contWd[wd]++;
+    diasWd[wd].add(dIso);
+  });
+  const taxasWd={};
+  for(let i=0;i<7;i++){ const nd=diasWd[i].size; taxasWd[i]= nd?contWd[i]/nd:0; }
+  const ranking = Object.keys(taxasWd).map(function(k){ return {wd:parseInt(k), taxa:taxasWd[k]}; }).sort(function(a,b){return b.taxa-a.taxa;});
+  const rankPorWd = {};
+  ranking.forEach(function(r,i){ rankPorWd[r.wd]=i+1; });
+  return {porDiaISO:porDiaISO, taxasWd:taxasWd, rankPorWd:rankPorWd};
+}
+function _confiancaParaDia(dia, ctx){
+  const wd = new Date(dia+'T12:00:00').getDay();
+  const rank = ctx.rankPorWd[wd];
+  const sinal1 = rank && rank<=3;
+  const countDia = ctx.porDiaISO[dia]||0;
+  const sinal2 = countDia >= ctx.taxasWd[wd];
+  const n = (sinal1?1:0)+(sinal2?1:0);
+  if(n>=2) return {emoji:'🟢', titulo:'Dia favorável (2 de 2 sinais)'};
+  if(n===1) return {emoji:'🟡', titulo:'Dia misto (1 de 2 sinais)'};
+  return {emoji:'🔴', titulo:'Dia mais fraco (0 de 2 sinais)'};
+}
+
 function renderHistPorDia(arr, containerId, tipo, filtroDia){
   const hc = document.getElementById(containerId);
   if(!hc) return;
@@ -4597,9 +4637,11 @@ function renderHistPorDia(arr, containerId, tipo, filtroDia){
   const ivsD = diaData.filter(t=>t.interval>0&&t.interval<120).map(t=>t.interval);
   const avgD = ivsD.length?(ivsD.reduce((a,b)=>a+b,0)/ivsD.length).toFixed(1):null;
   const cor = tipo==='triplo'?'var(--green)':tipo==='quadra'?'var(--gold)':'var(--purple)';
+  const _confCtx = _confiancaHistoricaData();
+  const _conf = _confiancaParaDia(diaAtivo, _confCtx);
 
   html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#080d08;border-bottom:1px solid var(--border);">
-    <div style="font-size:0.55rem;color:${cor};font-weight:700;">${diaLabel(diaAtivo)} — ${diaData.length} registos</div>
+    <div style="font-size:0.55rem;color:${cor};font-weight:700;">${diaLabel(diaAtivo)} — ${diaData.length} registos <span title="${_conf.titulo}" style="margin-left:4px;">${_conf.emoji}</span></div>
     ${avgD?`<div style="font-size:0.5rem;color:var(--dim2);">Intv. médio: <span style="color:${cor};">${avgD} min</span></div>`:''}
   </div>`;
 
@@ -8055,6 +8097,19 @@ function renderConfiancaDia(){
   html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">⚠️ Combina sinais passados — não é garantia de resultado.</div>';
 
   el.innerHTML = html;
+
+  // Resumo por voz, uma vez por dia, na primeira vez que a Confianca renderiza
+  const hojeKey = _diaKey(Date.now());
+  const chaveVoz = 'pro_confianca_voz_'+hojeKey;
+  if(localStorage.getItem(chaveVoz)!=='1'){
+    localStorage.setItem(chaveVoz, '1');
+    let fraseHora = '';
+    if(typeof computarCiclosHora==='function'){
+      const ciclos = computarCiclosHora();
+      if(ciclos.length){ fraseHora = ' A hora mais forte de quadras agora é '+pad(ciclos[0].h)+' horas.'; }
+    }
+    falarAlerta('Bom dia. Hoje é '+label.toLowerCase()+', com '+nFav+' de '+sinais.length+' sinais a favor.'+fraseHora);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -8623,6 +8678,7 @@ function renderPadroes(){
   safeRun(renderHorasSemanaAtual,'renderHorasSemanaAtual');
   safeRun(renderMudancaPadrao,'renderMudancaPadrao');
   safeRun(renderRotacaoHoras,'renderRotacaoHoras');
+  safeRun(renderSemanaIdeal,'renderSemanaIdeal');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderTermometroDia,'renderTermometroDia');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
@@ -8998,6 +9054,89 @@ function renderRotacaoHoras(){
       +'</div>';
   }).join('');
   html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Compara as horas de semana para semana — se repetirem, é padrão fixo; se mudarem sempre, é rotação.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  SEMANA IDEAL (melhor semana completa do historico)
+// ══════════════════════════════════════════════
+function renderSemanaIdeal(){
+  const el = document.getElementById('semana-ideal');
+  if(!el) return;
+
+  const tUnicos = _dedupUnicos(S.triplos);
+  const qUnicos = _dedupUnicos(S.quadras);
+
+  function inicioSemanaDe(d){
+    const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    dd.setDate(dd.getDate()-dd.getDay());
+    return dd;
+  }
+  const hojeD = new Date();
+  const inicioSemanaAtual = inicioSemanaDe(hojeD);
+
+  function agrupar(arr){
+    const porSemana = {};
+    arr.forEach(function(e){
+      const d = new Date(e.ts);
+      const ini = inicioSemanaDe(d);
+      if(ini.getTime()>=inicioSemanaAtual.getTime()) return;
+      const key = ini.getTime();
+      if(!porSemana[key]) porSemana[key] = {ini:ini, itens:[]};
+      porSemana[key].itens.push(e);
+    });
+    return porSemana;
+  }
+  const semanasQ = agrupar(qUnicos);
+  const semanasT = agrupar(tUnicos);
+
+  const chaves = Object.keys(semanasQ);
+  if(!chaves.length){
+    el.innerHTML = '<div class="empty">Ainda sem uma semana completa no histórico.</div>';
+    return;
+  }
+
+  let melhorKey=null, melhorCount=-1;
+  chaves.forEach(function(k){
+    const n = semanasQ[k].itens.length;
+    if(n>melhorCount){ melhorCount=n; melhorKey=k; }
+  });
+
+  const semQ = semanasQ[melhorKey];
+  const semT = semanasT[melhorKey] || {itens:[]};
+  const fim = new Date(semQ.ini.getTime()+6*86400000);
+
+  // melhor dia dentro dessa semana (T+Q combinado)
+  const porDia = {};
+  semQ.itens.concat(semT.itens).forEach(function(e){
+    const dk = _diaKey(e.ts);
+    porDia[dk] = (porDia[dk]||0)+1;
+  });
+  let melhorDiaKey=null, melhorDiaCount=-1;
+  Object.keys(porDia).forEach(function(dk){ if(porDia[dk]>melhorDiaCount){ melhorDiaCount=porDia[dk]; melhorDiaKey=dk; } });
+  let melhorDiaTxt = '—';
+  if(melhorDiaKey){
+    const p = melhorDiaKey.split('-').map(Number);
+    const d = new Date(p[0],p[1],p[2]);
+    const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    melhorDiaTxt = diasSemana[d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' ('+melhorDiaCount+' registos)';
+  }
+
+  function top3(itens){
+    const freq={};
+    itens.forEach(function(e){ const h=parseInt(e.hora.split(':')[0]); freq[h]=(freq[h]||0)+1; });
+    return Object.entries(freq).map(function(p){return {h:parseInt(p[0]),n:p[1]};}).sort(function(a,b){return b.n-a.n;}).slice(0,3).map(function(r){return pad(r.h)+'h';}).join(', ');
+  }
+
+  let html = '<div style="background:#0a0a14;border-radius:9px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.8;">';
+  html += '📅 <b style="color:var(--gold);">'+pad(semQ.ini.getDate())+'/'+pad(semQ.ini.getMonth()+1)+' a '+pad(fim.getDate())+'/'+pad(fim.getMonth()+1)+'</b><br>';
+  html += '🟡 Quadras: <b>'+semQ.itens.length+'</b> · 🟢 Triplos: <b>'+semT.itens.length+'</b><br>';
+  html += '🏆 Melhor dia dessa semana: <b>'+melhorDiaTxt+'</b><br>';
+  html += '🟢 Horas mais fortes (triplos): <b>'+(top3(semT.itens)||'—')+'</b><br>';
+  html += '🟡 Horas mais fortes (quadras): <b>'+(top3(semQ.itens)||'—')+'</b>';
+  html += '</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">💡 Usa como referência do que "correu bem" — não significa que vai repetir-se.</div>';
 
   el.innerHTML = html;
 }
