@@ -1582,6 +1582,24 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="semana-ideal" style="padding:8px;"></div>
   </div>
 
+  <!-- SEMANA MAIS FRACA -->
+  <div class="card" style="border-color:#3a1a1a;margin-bottom:10px;background:linear-gradient(135deg,#180404,#140404);">
+    <div class="ch" style="border-color:#3a1a1a;">
+      <div class="ci" style="background:#180404;">📉</div>
+      <div><div class="ct" style="color:#ef4444;">Semana Mais Fraca</div><div class="cs">A pior semana do teu histórico, e o que teve de diferente</div></div>
+    </div>
+    <div id="semana-fraca" style="padding:8px;"></div>
+  </div>
+
+  <!-- PAINEL DE SEQUENCIAS LONGAS -->
+  <div class="card" style="border-color:#1a3a2a;margin-bottom:10px;background:linear-gradient(135deg,#04180c,#04140a);">
+    <div class="ch" style="border-color:#1a3a2a;">
+      <div class="ci" style="background:#04180c;">🔗</div>
+      <div><div class="ct" style="color:#34d399;">Sequências Longas</div><div class="cs">As maiores "rajadas" de quadras já registadas</div></div>
+    </div>
+    <div id="sequencias-longas" style="padding:8px;"></div>
+  </div>
+
   <!-- RESUMO HOJE -->
   <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;background:linear-gradient(135deg,#0a1408,#0c160a);">
     <div class="ch" style="border-color:#2a3a1a;">
@@ -2128,6 +2146,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--orange);">Detector de Ciclo por Hora</div><div class="cs">Quais horas tendem a repetir diariamente ou a cada 2-3 dias</div></div>
     </div>
     <div id="ciclo-hora" style="padding:8px;"></div>
+  </div>
+
+  <!-- CONTAGEM DECRESCENTE PROVAVEL -->
+  <div class="card" style="border-color:#0a2a3a;margin-bottom:10px;background:linear-gradient(135deg,#04141a,#040f14);">
+    <div class="ch" style="border-color:#0a2a3a;">
+      <div class="ci" style="background:#04141a;">⏳</div>
+      <div><div class="ct" style="color:#38bdf8;">Contagem Decrescente</div><div class="cs">Falta quanto para a próxima janela esperada</div></div>
+    </div>
+    <div id="contagem-provavel" style="padding:8px;"></div>
   </div>
 
   <!-- VALIDADOR DE PREVISOES -->
@@ -3453,6 +3480,7 @@ function tick() {
     updateDupCountdown();
     renderTimers();
     updatePlanCountdown();
+    updateContagemProvavel();
     const dc=document.getElementById('dash-clock');
     if(dc) dc.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}`;
   } catch(e) { console.error('Erro no tick:', e); }
@@ -8679,6 +8707,8 @@ function renderPadroes(){
   safeRun(renderMudancaPadrao,'renderMudancaPadrao');
   safeRun(renderRotacaoHoras,'renderRotacaoHoras');
   safeRun(renderSemanaIdeal,'renderSemanaIdeal');
+  safeRun(renderSemanaFraca,'renderSemanaFraca');
+  safeRun(renderSequenciasLongas,'renderSequenciasLongas');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderTermometroDia,'renderTermometroDia');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
@@ -9139,6 +9169,199 @@ function renderSemanaIdeal(){
   html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">💡 Usa como referência do que "correu bem" — não significa que vai repetir-se.</div>';
 
   el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  SEMANA MAIS FRACA (oposto da Semana Ideal)
+// ══════════════════════════════════════════════
+function renderSemanaFraca(){
+  const el = document.getElementById('semana-fraca');
+  if(!el) return;
+
+  const tUnicos = _dedupUnicos(S.triplos);
+  const qUnicos = _dedupUnicos(S.quadras);
+
+  function inicioSemanaDe(d){
+    const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    dd.setDate(dd.getDate()-dd.getDay());
+    return dd;
+  }
+  const hojeD = new Date();
+  const inicioSemanaAtual = inicioSemanaDe(hojeD);
+
+  function agrupar(arr){
+    const porSemana = {};
+    arr.forEach(function(e){
+      const d = new Date(e.ts);
+      const ini = inicioSemanaDe(d);
+      if(ini.getTime()>=inicioSemanaAtual.getTime()) return;
+      const key = ini.getTime();
+      if(!porSemana[key]) porSemana[key] = {ini:ini, itens:[]};
+      porSemana[key].itens.push(e);
+    });
+    return porSemana;
+  }
+  const semanasQ = agrupar(qUnicos);
+  const semanasT = agrupar(tUnicos);
+
+  const chaves = Object.keys(semanasQ);
+  if(chaves.length<3){
+    el.innerHTML = '<div class="empty">Ainda com poucas semanas completas para identificar a mais fraca (mínimo 3).</div>';
+    return;
+  }
+
+  const media = chaves.reduce(function(a,k){return a+semanasQ[k].itens.length;},0)/chaves.length;
+
+  let piorKey=null, piorCount=Infinity;
+  chaves.forEach(function(k){
+    const n = semanasQ[k].itens.length;
+    if(n<piorCount){ piorCount=n; piorKey=k; }
+  });
+
+  const semQ = semanasQ[piorKey];
+  const semT = semanasT[piorKey] || {itens:[]};
+  const fim = new Date(semQ.ini.getTime()+6*86400000);
+
+  const porDia = {};
+  semQ.itens.concat(semT.itens).forEach(function(e){
+    const dk = _diaKey(e.ts);
+    porDia[dk] = (porDia[dk]||0)+1;
+  });
+  let piorDiaKey=null, piorDiaCount=Infinity;
+  Object.keys(porDia).forEach(function(dk){ if(porDia[dk]<piorDiaCount){ piorDiaCount=porDia[dk]; piorDiaKey=dk; } });
+  let piorDiaTxt = '—';
+  if(piorDiaKey){
+    const p = piorDiaKey.split('-').map(Number);
+    const d = new Date(p[0],p[1],p[2]);
+    const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    piorDiaTxt = diasSemana[d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' ('+piorDiaCount+' registos)';
+  }
+
+  const pctAbaixo = media ? Math.round((1-semQ.itens.length/media)*100) : 0;
+
+  let html = '<div style="background:#0a0a14;border-radius:9px;padding:9px;font-size:0.5rem;color:var(--text);line-height:1.8;">';
+  html += '📅 <b style="color:#ef4444;">'+pad(semQ.ini.getDate())+'/'+pad(semQ.ini.getMonth()+1)+' a '+pad(fim.getDate())+'/'+pad(fim.getMonth()+1)+'</b><br>';
+  html += '🟡 Quadras: <b>'+semQ.itens.length+'</b> ('+(pctAbaixo>0?pctAbaixo+'% abaixo da média':'na média')+') · 🟢 Triplos: <b>'+semT.itens.length+'</b><br>';
+  html += '📉 Dia mais fraco dessa semana: <b>'+piorDiaTxt+'</b>';
+  html += '</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">💡 Compara com outras semanas fracas ao longo do tempo — se houver um padrão em comum (ex: sempre a seguir a uma boa semana), pode ser um sinal a vigiar.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  SEQUENCIAS LONGAS (rajadas de 3+ quadras em pouco tempo)
+// ══════════════════════════════════════════════
+function renderSequenciasLongas(){
+  const el = document.getElementById('sequencias-longas');
+  if(!el) return;
+
+  const unicos = _dedupUnicos(S.quadras);
+  const porDia = {};
+  unicos.forEach(function(e){
+    const dk = _diaKey(e.ts);
+    if(!porDia[dk]) porDia[dk] = [];
+    porDia[dk].push({min: toMin(e.hora), hora: e.hora, num: e.num});
+  });
+
+  const rajadas = [];
+  Object.keys(porDia).forEach(function(dk){
+    const lst = porDia[dk].slice().sort(function(a,b){ return a.min-b.min; });
+    let atual = [lst[0]];
+    for(let i=1;i<lst.length;i++){
+      if(lst[i].min - lst[i-1].min <= 30){
+        atual.push(lst[i]);
+      } else {
+        if(atual.length>=3) rajadas.push({dk:dk, itens:atual.slice()});
+        atual = [lst[i]];
+      }
+    }
+    if(atual.length>=3) rajadas.push({dk:dk, itens:atual.slice()});
+  });
+
+  if(!rajadas.length){
+    el.innerHTML = '<div class="empty">Ainda sem sequências de 3+ quadras em menos de 30min entre cada, no teu histórico.</div>';
+    return;
+  }
+
+  rajadas.sort(function(a,b){ return b.itens.length-a.itens.length; });
+  const top = rajadas.slice(0,6);
+
+  const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  let html = top.map(function(r){
+    const p = r.dk.split('-').map(Number);
+    const d = new Date(p[0],p[1],p[2]);
+    const primeira = r.itens[0].hora, ultima = r.itens[r.itens.length-1].hora;
+    const duracao = r.itens[r.itens.length-1].min - r.itens[0].min;
+    return '<div style="background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
+      +'<div style="font-size:0.5rem;color:#34d399;font-weight:700;">'+r.itens.length+' quadras seguidas — '+diasSemana[d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'</div>'
+      +'<div style="font-size:0.44rem;color:var(--dim2);">'+primeira+' → '+ultima+' (em '+duracao+'min) · números: '+r.itens.map(function(i){return i.num;}).join(', ')+'</div>'
+      +'</div>';
+  }).join('');
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 "Seguidas" = intervalo ≤30min entre cada uma. Serve como referência do teto histórico, não previsão.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  CONTAGEM DECRESCENTE PARA O PROXIMO "PROVAVEL"
+// ══════════════════════════════════════════════
+var _contagemAlvos = [];
+function renderContagemProvavel(){
+  const el = document.getElementById('contagem-provavel');
+  if(!el || typeof computarCiclosHora!=='function') return;
+
+  const ciclos = computarCiclosHora();
+  if(!ciclos.length){
+    el.innerHTML = '<div class="empty">Ainda sem horas com ciclo detetado.</div>';
+    _contagemAlvos = [];
+    return;
+  }
+
+  const candidatos = ciclos.filter(function(r){ return r.ordem<3; }).slice(0,3);
+  if(!candidatos.length){
+    el.innerHTML = '<div class="empty">Nenhuma hora com janela esperada próxima neste momento.</div>';
+    _contagemAlvos = [];
+    return;
+  }
+
+  _contagemAlvos = candidatos.map(function(r){
+    const cicloEsperado = r.tipo==='diaria' ? 1 : 3;
+    const ultima = r.datas[r.datas.length-1];
+    const alvo = new Date(ultima.getTime() + cicloEsperado*86400000);
+    alvo.setHours(r.h, 0, 0, 0);
+    return { h:r.h, tipo:r.tipo, alvo:alvo, id:'contagem-item-'+r.h };
+  });
+
+  el.innerHTML = _contagemAlvos.map(function(a){
+    return '<div style="display:flex;align-items:center;gap:7px;background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
+      +'<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:#38bdf8;">'+pad(a.h)+'h</span>'
+      +'<span style="font-size:0.42rem;color:var(--dim2);flex:1;">'+(a.tipo==='diaria'?'diária':'ciclo 2-3d')+'</span>'
+      +'<span id="'+a.id+'" style="font-family:var(--font-mono);font-size:0.5rem;font-weight:700;color:var(--text);">—</span>'
+      +'</div>';
+  }).join('') + '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">⏳ Contagem até à janela esperada, com base no ciclo detetado. Passado o tempo, pode sair a qualquer momento.</div>';
+
+  updateContagemProvavel();
+}
+function updateContagemProvavel(){
+  if(!_contagemAlvos || !_contagemAlvos.length) return;
+  const agora = new Date();
+  _contagemAlvos.forEach(function(a){
+    const el = document.getElementById(a.id);
+    if(!el) return;
+    const diffMs = a.alvo - agora;
+    if(diffMs<=0){
+      el.textContent = 'janela aberta';
+      el.style.color = 'var(--green)';
+    } else {
+      const totalMin = Math.floor(diffMs/60000);
+      const dias = Math.floor(totalMin/1440);
+      const horas = Math.floor((totalMin%1440)/60);
+      const min = totalMin%60;
+      el.textContent = (dias>0?dias+'d ':'')+pad(horas)+'h'+pad(min)+'m';
+      el.style.color = 'var(--text)';
+    }
+  });
 }
 
 function renderResumoHoje(){
@@ -15292,6 +15515,7 @@ function renderHora(){
   safeRun(renderGatilhoTriploQuadra,'renderGatilhoTriploQuadra');
   safeRun(renderSecaAntesQuadra,'renderSecaAntesQuadra');
   safeRun(renderCicloPorHora,'renderCicloPorHora');
+  safeRun(renderContagemProvavel,'renderContagemProvavel');
   safeRun(renderValidadorPrevisoes,'renderValidadorPrevisoes');
   safeRun(renderRadarDiaria,'renderRadarDiaria');
   safeRun(renderMapaCompanhia,'renderMapaCompanhia');
