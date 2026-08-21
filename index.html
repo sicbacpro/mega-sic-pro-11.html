@@ -2186,6 +2186,7 @@ textarea:focus{border-color:var(--green)!important;}
       <div id="hora-extrato-pills" style="display:flex;gap:6px;margin-bottom:8px;"></div>
       <div id="hora-extrato-resumo" style="font-size:0.5rem;color:var(--dim2);margin-bottom:8px;"></div>
       <div id="hora-extrato-insights" style="margin-bottom:4px;"></div>
+      <div id="hora-minutos-chart" style="margin-bottom:10px;"></div>
       <div id="grelha-dia-minuto" style="margin-bottom:10px;"></div>
       <div id="hora-semana-chart" style="margin-bottom:10px;"></div>
       <div id="hora-extrato-lista" style="max-height:340px;overflow-y:auto;"></div>
@@ -15574,6 +15575,7 @@ function horaExtratoRender(){
   if(insightsEl){
     if(!doHora.length){
       insightsEl.innerHTML='';
+      const mc = document.getElementById('hora-minutos-chart'); if(mc) mc.innerHTML='';
     } else {
       // Minutos mais fortes
       const porMinuto = {};
@@ -15590,6 +15592,8 @@ function horaExtratoRender(){
           +topMinutos.map(function(p){return '<b style="color:var(--cyan);font-family:var(--font-mono);">:'+pad(parseInt(p[0]))+'</b> ('+p[1]+'x)';}).join('  \u00b7  ')
           +'</div>'
         : '';
+
+      safeRun(function(){ renderMinutosDentroHoraChart(porMinuto, h); }, 'renderMinutosDentroHoraChart');
 
       // Dias distintos que contribuíram (fiabilidade da amostra)
       const diasDistintos = {};
@@ -15751,6 +15755,49 @@ function calcHoraUltimosDias(h, tipo, numDias){
     if(dia) dia.count++;
   });
   return dias;
+}
+
+function renderMinutosDentroHoraChart(porMinuto, h){
+  const el = document.getElementById('hora-minutos-chart');
+  if(!el) return;
+
+  const valores = [];
+  for(let m=0;m<60;m++) valores.push(porMinuto[m]||0);
+  const maxC = Math.max.apply(null, valores.concat([1]));
+  if(maxC===0){ el.innerHTML=''; return; }
+
+  function corPara(v){
+    if(v===0) return '#141a14';
+    const t = v/maxC;
+    if(t>=0.8) return '#ef4444';
+    if(t>=0.5) return '#f97316';
+    if(t>=0.25) return '#38bdf8';
+    return '#1a3a2a';
+  }
+
+  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:6px;">⏱ Concentração por minuto dentro de <b style="color:var(--cyan);">'+pad(h)+'h</b></div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(30,1fr);gap:1.5px;margin-bottom:2px;">';
+  for(let m=0;m<30;m++){
+    html += '<div style="aspect-ratio:1;border-radius:2px;background:'+corPara(valores[m])+';" title=":'+pad(m)+' — '+valores[m]+'x"></div>';
+  }
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(30,1fr);gap:1.5px;margin-bottom:6px;">';
+  for(let m=30;m<60;m++){
+    html += '<div style="aspect-ratio:1;border-radius:2px;background:'+corPara(valores[m])+';" title=":'+pad(m)+' — '+valores[m]+'x"></div>';
+  }
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;font-size:0.36rem;color:var(--dim2);">'
+    +'<span>:00</span><span style="margin-left:auto;">:29</span></div>'
+    +'<div style="display:flex;gap:8px;font-size:0.36rem;color:var(--dim2);margin-bottom:4px;">'
+    +'<span>:30</span><span style="margin-left:auto;">:59</span></div>';
+  html += '<div style="display:flex;gap:8px;align-items:center;font-size:0.38rem;color:var(--dim2);">'
+    +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#1a3a2a;border-radius:2px;display:inline-block;"></span>baixo</span>'
+    +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#38bdf8;border-radius:2px;display:inline-block;"></span>médio</span>'
+    +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#f97316;border-radius:2px;display:inline-block;"></span>alto</span>'
+    +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#ef4444;border-radius:2px;display:inline-block;"></span>topo</span>'
+    +'</div>';
+
+  el.innerHTML = html;
 }
 
 function renderHoraSemanaChart(h){
