@@ -15593,7 +15593,7 @@ function horaExtratoRender(){
           +'</div>'
         : '';
 
-      safeRun(function(){ renderMinutosDentroHoraChart(porMinuto, h); }, 'renderMinutosDentroHoraChart');
+      safeRun(function(){ renderMinutosDentroHoraChart(doHora, h); }, 'renderMinutosDentroHoraChart');
 
       // Dias distintos que contribuíram (fiabilidade da amostra)
       const diasDistintos = {};
@@ -15757,45 +15757,63 @@ function calcHoraUltimosDias(h, tipo, numDias){
   return dias;
 }
 
-function renderMinutosDentroHoraChart(porMinuto, h){
+function renderMinutosDentroHoraChart(doHora, h){
   const el = document.getElementById('hora-minutos-chart');
   if(!el) return;
+  if(!doHora || !doHora.length){ el.innerHTML=''; return; }
 
-  const valores = [];
-  for(let m=0;m<60;m++) valores.push(porMinuto[m]||0);
-  const maxC = Math.max.apply(null, valores.concat([1]));
-  if(maxC===0){ el.innerHTML=''; return; }
+  const hoje0h = new Date(); hoje0h.setHours(0,0,0,0);
+  const dias = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(hoje0h); d.setDate(d.getDate()-i);
+    dias.push({label: pad(d.getDate())+'/'+pad(d.getMonth()+1), ts0h:d.getTime(), buckets:[0,0,0,0,0,0]});
+  }
 
+  let temDados = false;
+  doHora.forEach(function(e){
+    if(!e.ts) return;
+    const e0h = new Date(e.ts); e0h.setHours(0,0,0,0);
+    const dia = dias.find(function(d){ return d.ts0h===e0h.getTime(); });
+    if(!dia) return;
+    const m = parseInt((e.hora.split(':')[1])||'0');
+    const bucket = Math.min(5, Math.floor(m/10));
+    dia.buckets[bucket]++;
+    temDados = true;
+  });
+
+  if(!temDados){ el.innerHTML=''; return; }
+
+  const maxC = Math.max.apply(null, dias.flatMap(function(d){return d.buckets;}).concat([1]));
   function corPara(v){
-    if(v===0) return '#141a14';
+    if(v===0) return '#141a1a';
     const t = v/maxC;
-    if(t>=0.8) return '#ef4444';
-    if(t>=0.5) return '#f97316';
-    if(t>=0.25) return '#38bdf8';
+    if(t>=0.75) return '#ef4444';
+    if(t>=0.45) return '#f97316';
+    if(t>=0.2) return '#38bdf8';
     return '#1a3a2a';
   }
+  const faixas = [':00-09',':10-19',':20-29',':30-39',':40-49',':50-59'];
 
-  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:6px;">⏱ Concentração por minuto dentro de <b style="color:var(--cyan);">'+pad(h)+'h</b></div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(30,1fr);gap:1.5px;margin-bottom:2px;">';
-  for(let m=0;m<30;m++){
-    html += '<div style="aspect-ratio:1;border-radius:2px;background:'+corPara(valores[m])+';" title=":'+pad(m)+' — '+valores[m]+'x"></div>';
-  }
+  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:6px;">⏱ Em que faixa de minutos, dentro de <b style="color:var(--cyan);">'+pad(h)+'h</b>, cada dia concentrou mais — últimos 7 dias</div>';
+  html += '<div style="display:grid;grid-template-columns:38px repeat(7,1fr);gap:2px;margin-bottom:2px;">';
+  html += '<div></div>' + dias.map(function(d){ return '<div style="text-align:center;font-size:0.34rem;color:var(--dim2);">'+d.label+'</div>'; }).join('');
   html += '</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(30,1fr);gap:1.5px;margin-bottom:6px;">';
-  for(let m=30;m<60;m++){
-    html += '<div style="aspect-ratio:1;border-radius:2px;background:'+corPara(valores[m])+';" title=":'+pad(m)+' — '+valores[m]+'x"></div>';
+  for(let b=0;b<6;b++){
+    html += '<div style="display:grid;grid-template-columns:38px repeat(7,1fr);gap:2px;margin-bottom:2px;align-items:center;">';
+    html += '<div style="font-size:0.36rem;color:var(--dim2);font-family:var(--font-mono);">'+faixas[b]+'</div>';
+    html += dias.map(function(d){
+      const v = d.buckets[b];
+      return '<div style="aspect-ratio:1;border-radius:3px;background:'+corPara(v)+';display:flex;align-items:center;justify-content:center;font-size:0.34rem;color:'+(v>0?'white':'transparent')+';font-weight:700;" title="'+d.label+' '+faixas[b]+' — '+v+'x">'+(v>0?v:'')+'</div>';
+    }).join('');
+    html += '</div>';
   }
-  html += '</div>';
-  html += '<div style="display:flex;gap:8px;font-size:0.36rem;color:var(--dim2);">'
-    +'<span>:00</span><span style="margin-left:auto;">:29</span></div>'
-    +'<div style="display:flex;gap:8px;font-size:0.36rem;color:var(--dim2);margin-bottom:4px;">'
-    +'<span>:30</span><span style="margin-left:auto;">:59</span></div>';
-  html += '<div style="display:flex;gap:8px;align-items:center;font-size:0.38rem;color:var(--dim2);">'
+  html += '<div style="display:flex;gap:8px;align-items:center;font-size:0.38rem;color:var(--dim2);margin-top:4px;">'
     +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#1a3a2a;border-radius:2px;display:inline-block;"></span>baixo</span>'
     +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#38bdf8;border-radius:2px;display:inline-block;"></span>médio</span>'
     +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#f97316;border-radius:2px;display:inline-block;"></span>alto</span>'
     +'<span style="display:flex;align-items:center;gap:2px;"><span style="width:8px;height:8px;background:#ef4444;border-radius:2px;display:inline-block;"></span>topo</span>'
     +'</div>';
+  html += '<div style="font-size:0.38rem;color:var(--dim2);margin-top:4px;">💡 Se a cor mais forte saltar de coluna (dia) para coluna, sem ficar fixa na mesma faixa, é sinal de que este minuto não segue um padrão fixo dentro desta hora.</div>';
 
   el.innerHTML = html;
 }
