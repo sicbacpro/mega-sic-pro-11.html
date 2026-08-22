@@ -2137,6 +2137,7 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:#34d399;">Mapa de Companhia</div><div class="cs">Depois desta quadra, qual a chance de vir outra em 30min?</div></div>
     </div>
     <div id="mapa-companhia" style="padding:8px;"></div>
+    <div id="mapa-companhia-semana" style="padding:0 8px 8px;"></div>
   </div>
 
   <!-- DETECTOR DE CICLO POR HORA -->
@@ -15437,7 +15438,60 @@ function renderMapaCompanhia(){
 }
 
 // ══════════════════════════════════════════════
-//  CALENDARIO DE CICLOS (ultimos 14 dias)
+//  MAPA DE COMPANHIA - ULTIMOS 7 DIAS (clusters por dia)
+// ══════════════════════════════════════════════
+function renderMapaCompanhiaSemana(){
+  const el = document.getElementById('mapa-companhia-semana');
+  if(!el) return;
+
+  const dupIdx = new Set(_encontrarDuplicados(S.quadras));
+  const unicos = S.quadras.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts && e.hora; });
+
+  const hoje0h = new Date(); hoje0h.setHours(0,0,0,0);
+  const dias = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(hoje0h); d.setDate(d.getDate()-i);
+    dias.push({label: pad(d.getDate())+'/'+pad(d.getMonth()+1), ts0h:d.getTime(), clusters:0});
+  }
+
+  const porDia = {};
+  unicos.forEach(function(e){
+    const e0h = new Date(e.ts); e0h.setHours(0,0,0,0);
+    const key = e0h.getTime();
+    if(!porDia[key]) porDia[key] = [];
+    porDia[key].push(toMin(e.hora));
+  });
+
+  let temDados = false;
+  dias.forEach(function(d){
+    const lst = (porDia[d.ts0h]||[]).slice().sort(function(a,b){return a-b;});
+    for(let i=1;i<lst.length;i++){
+      if(lst[i]-lst[i-1]<=30){ d.clusters++; temDados=true; }
+    }
+  });
+
+  if(!temDados){
+    el.innerHTML = '<div style="font-size:0.42rem;color:var(--dim2);">Sem "companhias" (quadras a ≤30min uma da outra) nos últimos 7 dias.</div>';
+    return;
+  }
+
+  const maxC = Math.max.apply(null, dias.map(function(d){return d.clusters;}).concat([1]));
+  let html = '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:5px;">🔗 Quantas "companhias" por dia — últimos 7 dias</div>';
+  html += '<div style="display:flex;align-items:flex-end;gap:3px;height:44px;margin-bottom:3px;">'
+    +dias.map(function(d){
+      const h = Math.max(3, Math.round(d.clusters/maxC*36));
+      const cor = d.clusters===0 ? '#1a3a2a' : (d.clusters>=maxC ? '#ef4444' : '#38bdf8');
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
+        +'<div style="font-size:0.32rem;color:var(--dim2);">'+(d.clusters||'')+'</div>'
+        +'<div style="width:100%;height:'+h+'px;background:'+cor+';border-radius:2px 2px 0 0;"></div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+  html += '<div style="display:flex;gap:3px;">'+dias.map(function(d){ return '<div style="flex:1;text-align:center;font-size:0.3rem;color:var(--dim2);">'+d.label+'</div>'; }).join('')+'</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Se a barra variar muito de dia para dia, o cluster de 30min não é constante — é mais forte nuns dias que noutros.</div>';
+
+  el.innerHTML = html;
+}
 // ══════════════════════════════════════════════
 function renderCalendarioCiclos(){
   const el = document.getElementById('calendario-ciclos');
@@ -15520,6 +15574,7 @@ function renderHora(){
   safeRun(renderValidadorPrevisoes,'renderValidadorPrevisoes');
   safeRun(renderRadarDiaria,'renderRadarDiaria');
   safeRun(renderMapaCompanhia,'renderMapaCompanhia');
+  safeRun(renderMapaCompanhiaSemana,'renderMapaCompanhiaSemana');
   safeRun(renderCalendarioCiclos,'renderCalendarioCiclos');
   safeRun(renderAlertaCruzadoCiclos,'renderAlertaCruzadoCiclos');
 }
@@ -15762,6 +15817,8 @@ function renderMinutosDentroHoraChart(doHora, h){
   if(!el) return;
   if(!doHora || !doHora.length){ el.innerHTML=''; return; }
 
+  const rotuloTipo = horaExtratoTipo==='triplo' ? ' (Triplos)' : horaExtratoTipo==='quadra' ? ' (Quadras)' : ' (Combinado)';
+
   const hoje0h = new Date(); hoje0h.setHours(0,0,0,0);
   const dias = [];
   for(let i=6;i>=0;i--){
@@ -15794,7 +15851,23 @@ function renderMinutosDentroHoraChart(doHora, h){
   }
   const faixas = [':00-09',':10-19',':20-29',':30-39',':40-49',':50-59'];
 
-  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:6px;">⏱ Em que faixa de minutos, dentro de <b style="color:var(--cyan);">'+pad(h)+'h</b>, cada dia concentrou mais — últimos 7 dias</div>';
+  // Faixa quente da semana: em quantos dias, essa faixa foi o pico do dia
+  const vitoriasPorFaixa = [0,0,0,0,0,0];
+  let diasComPico = 0;
+  dias.forEach(function(d){
+    const maxDia = Math.max.apply(null, d.buckets);
+    if(maxDia<=0) return;
+    diasComPico++;
+    d.buckets.forEach(function(v,i){ if(v===maxDia) vitoriasPorFaixa[i]++; });
+  });
+  let faixaVencedora = -1, maxVitorias = 0;
+  vitoriasPorFaixa.forEach(function(v,i){ if(v>maxVitorias){ maxVitorias=v; faixaVencedora=i; } });
+  const resumoFaixa = faixaVencedora>=0
+    ? '⭐ Faixa quente da semana: <b style="color:var(--gold);">'+faixas[faixaVencedora]+'</b> (pico em '+maxVitorias+' de '+diasComPico+' dias com dados)'
+    : '';
+
+  let html = resumoFaixa ? '<div style="font-size:0.46rem;color:var(--text);margin-bottom:6px;background:#0a0a14;border-radius:6px;padding:5px 8px;">'+resumoFaixa+'</div>' : '';
+  html += '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:6px;">⏱ Em que faixa de minutos, dentro de <b style="color:var(--cyan);">'+pad(h)+'h</b>'+rotuloTipo+', cada dia concentrou mais — últimos 7 dias</div>';
   html += '<div style="display:grid;grid-template-columns:38px repeat(7,1fr);gap:2px;margin-bottom:2px;">';
   html += '<div></div>' + dias.map(function(d){ return '<div style="text-align:center;font-size:0.34rem;color:var(--dim2);">'+d.label+'</div>'; }).join('');
   html += '</div>';
