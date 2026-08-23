@@ -4649,7 +4649,12 @@ function renderHistPorDia(arr, containerId, tipo, filtroDia){
   let html = '';
 
   // Seletor de dias
-  html += `<div style="display:flex;gap:5px;overflow-x:auto;padding:8px 10px 6px;scrollbar-width:none;border-bottom:1px solid var(--border);">`;
+  const _scrollAnteriorEl = document.getElementById(containerId+'-dias');
+  const _scrollAnterior = _scrollAnteriorEl ? _scrollAnteriorEl.scrollLeft : 0;
+  html += `<div style="display:flex;align-items:center;gap:6px;padding:8px 10px 0;">
+    <input type="date" id="${containerId}-jump" onchange="jumpParaData('${tipo}', this.value)" style="flex:1;padding:6px 4px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.5rem;">
+  </div>`;
+  html += `<div id="${containerId}-dias" style="display:flex;gap:5px;overflow-x:auto;padding:8px 10px 6px;scrollbar-width:none;border-bottom:1px solid var(--border);">`;
   diasOrdenados.forEach(d=>{
     const isAtivo = d===diaAtivo;
     const cor = tipo==='triplo'?'var(--green)':tipo==='quadra'?'var(--gold)':'var(--purple)';
@@ -4705,12 +4710,24 @@ function renderHistPorDia(arr, containerId, tipo, filtroDia){
   }
 
   hc.innerHTML = html;
+  const _novoScrollEl = document.getElementById(containerId+'-dias');
+  if(_novoScrollEl) _novoScrollEl.scrollLeft = _scrollAnterior;
 }
 
+function _scrollDiaAtivoParaVista(containerId){
+  const wrap = document.getElementById(containerId+'-dias');
+  if(!wrap) return;
+  const ativo = wrap.querySelector('button[style*="font-weight:700"]');
+  if(ativo && ativo.scrollIntoView) ativo.scrollIntoView({inline:'center', block:'nearest'});
+}
 function setHistFiltro(tipo, dia){
-  if(tipo==='triplo'){ histFiltroTriplos=dia; renderTriplos(); }
-  else if(tipo==='quadra'){ histFiltroQuadras=dia; renderQuadras(); }
-  else { histFiltroDuplos=dia; renderDuplos(); }
+  if(tipo==='triplo'){ histFiltroTriplos=dia; renderTriplos(); _scrollDiaAtivoParaVista('t-hist'); }
+  else if(tipo==='quadra'){ histFiltroQuadras=dia; renderQuadras(); _scrollDiaAtivoParaVista('q-hist'); }
+  else { histFiltroDuplos=dia; renderDuplos(); _scrollDiaAtivoParaVista('d-hist'); }
+}
+function jumpParaData(tipo, dataStr){
+  if(!dataStr) return;
+  setHistFiltro(tipo, dataStr);
 }
 
 // ══════════════════════════════════════════════
