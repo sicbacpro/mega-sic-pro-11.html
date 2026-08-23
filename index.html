@@ -1600,6 +1600,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="sequencias-longas" style="padding:8px;"></div>
   </div>
 
+  <!-- PADRAO DO MES -->
+  <div class="card" style="border-color:#0a3a4a;margin-bottom:10px;background:linear-gradient(135deg,#04141a,#040f14);">
+    <div class="ch" style="border-color:#0a3a4a;">
+      <div class="ci" style="background:#04141a;">📆</div>
+      <div><div class="ct" style="color:#38bdf8;">Padrão do Mês</div><div class="cs">Quadras por dia do mês — início, meio e fim</div></div>
+    </div>
+    <div id="padrao-mes" style="padding:8px;"></div>
+  </div>
+
   <!-- RESUMO HOJE -->
   <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;background:linear-gradient(135deg,#0a1408,#0c160a);">
     <div class="ch" style="border-color:#2a3a1a;">
@@ -2082,6 +2091,15 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
     <div id="min-mapa" style="padding:8px;"></div>
     <div style="padding:0 8px 8px;font-size:0.42rem;color:var(--dim2);">Para a hora toda em vez do minuto → <span onclick="irParaSubAbaAnalise('hora')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Por Hora</span>.</div>
+  </div>
+
+  <!-- DETECTOR DE MINUTOS VIZINHOS -->
+  <div class="card" style="border-color:#3a1a3a;margin-bottom:10px;background:linear-gradient(135deg,#180818,#140614);">
+    <div class="ch" style="border-color:#3a1a3a;">
+      <div class="ci" style="background:#180818;">🧩</div>
+      <div><div class="ct" style="color:#e879f9;">Minutos Vizinhos (Quadras)</div><div class="cs">Grupos de minutos próximos que aquecem juntos</div></div>
+    </div>
+    <div id="minutos-vizinhos" style="padding:8px;"></div>
   </div>
 
   <!-- CADENCIA DO JOGO -->
@@ -4711,7 +4729,13 @@ function renderHistPorDia(arr, containerId, tipo, filtroDia){
 
   hc.innerHTML = html;
   const _novoScrollEl = document.getElementById(containerId+'-dias');
-  if(_novoScrollEl) _novoScrollEl.scrollLeft = _scrollAnterior;
+  if(_novoScrollEl){
+    _novoScrollEl.scrollLeft = _scrollAnterior;
+    requestAnimationFrame(function(){
+      const el2 = document.getElementById(containerId+'-dias');
+      if(el2) el2.scrollLeft = _scrollAnterior;
+    });
+  }
 }
 
 function _scrollDiaAtivoParaVista(containerId){
@@ -8728,6 +8752,7 @@ function renderPadroes(){
   safeRun(renderSemanaIdeal,'renderSemanaIdeal');
   safeRun(renderSemanaFraca,'renderSemanaFraca');
   safeRun(renderSequenciasLongas,'renderSequenciasLongas');
+  safeRun(renderPadraoMes,'renderPadraoMes');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderTermometroDia,'renderTermometroDia');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
@@ -9323,7 +9348,82 @@ function renderSequenciasLongas(){
 }
 
 // ══════════════════════════════════════════════
-//  CONTAGEM DECRESCENTE PARA O PROXIMO "PROVAVEL"
+//  PADRAO DO MES (inicio seco, meio forte?)
+// ══════════════════════════════════════════════
+function renderPadraoMes(){
+  const el = document.getElementById('padrao-mes');
+  if(!el) return;
+
+  const unicos = _dedupUnicos(S.quadras);
+  if(unicos.length<30){
+    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos para testar isto (mínimo 30).</div>';
+    return;
+  }
+
+  const porDia = {}, mesesObs = {};
+  for(let d=1;d<=31;d++){ porDia[d]=0; mesesObs[d]=new Set(); }
+  unicos.forEach(function(e){
+    const dt = new Date(e.ts);
+    const dia = dt.getDate();
+    porDia[dia]++;
+    mesesObs[dia].add(dt.getFullYear()+'-'+dt.getMonth());
+  });
+
+  const maxMeses = Math.max.apply(null, Object.values(mesesObs).map(function(s){return s.size;}));
+
+  function somaBloco(ini, fim){
+    let tot=0, mesesSet = new Set();
+    for(let d=ini; d<=fim; d++){ tot+=porDia[d]; mesesObs[d].forEach(function(m){mesesSet.add(m);}); }
+    return {tot:tot, meses:mesesSet.size};
+  }
+  const inicio = somaBloco(1,10), meio = somaBloco(11,20), fim = somaBloco(21,31);
+  const taxaInicio = inicio.meses ? inicio.tot/inicio.meses : 0;
+  const taxaMeio = meio.meses ? meio.tot/meio.meses : 0;
+  const taxaFim = fim.meses ? fim.tot/fim.meses : 0;
+
+  const maxV = Math.max.apply(null, [1].concat(Object.keys(porDia).map(function(d){
+    const nm = mesesObs[d].size; return nm ? porDia[d]/nm : 0;
+  })));
+
+  let html = '<div style="display:flex;gap:1px;height:50px;align-items:flex-end;margin-bottom:4px;">';
+  for(let d=1;d<=31;d++){
+    const nm = mesesObs[d].size;
+    const taxa = nm ? porDia[d]/nm : 0;
+    const h = Math.max(2, Math.round(taxa/maxV*44));
+    const cor = d<=10 ? '#38bdf8' : (d<=20 ? '#4ade80' : '#f97316');
+    html += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;" title="dia '+d+': '+taxa.toFixed(1)+'/mês ('+nm+' meses obs.)">'
+      +'<div style="width:100%;height:'+h+'px;background:'+cor+';opacity:'+(nm<2?'0.4':'1')+';border-radius:1px;"></div>'
+      +'</div>';
+  }
+  html += '</div>';
+  html += '<div style="display:flex;gap:4px;font-size:0.3rem;color:var(--dim2);margin-bottom:8px;"><span style="flex:1;text-align:center;">1</span><span style="flex:1;text-align:center;">10</span><span style="flex:1;text-align:center;">20</span><span style="flex:1;text-align:center;">31</span></div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.4rem;color:#38bdf8;">Início (1-10)</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+taxaInicio.toFixed(1)+'</div>'
+    +'<div style="font-size:0.36rem;color:var(--dim2);">/mês</div>'
+    +'</div>'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.4rem;color:#4ade80;">Meio (11-20)</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+taxaMeio.toFixed(1)+'</div>'
+    +'<div style="font-size:0.36rem;color:var(--dim2);">/mês</div>'
+    +'</div>'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.4rem;color:#f97316;">Fim (21-31)</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+taxaFim.toFixed(1)+'</div>'
+    +'<div style="font-size:0.36rem;color:var(--dim2);">/mês</div>'
+    +'</div>'
+    +'</div>';
+
+  const hojeDia = new Date().getDate();
+  const blocoHoje = hojeDia<=10 ? 'início' : (hojeDia<=20 ? 'meio' : 'fim');
+  html += '<div style="font-size:0.46rem;color:var(--text);background:#0a0a14;border-radius:8px;padding:7px 9px;">📅 Hoje é dia '+hojeDia+' — está no bloco de <b style="color:var(--cyan);">'+blocoHoje+'</b> do mês.</div>';
+
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">⚠️ Amostra ainda de apenas '+maxMeses+' mês(es) completo(s) — os dias mais claros/transparentes no gráfico têm menos de 2 meses de dados, trata com mais cautela. Confirma com mais meses de histórico.</div>';
+
+  el.innerHTML = html;
+}
 // ══════════════════════════════════════════════
 var _contagemAlvos = [];
 function renderContagemProvavel(){
@@ -14510,6 +14610,7 @@ window.switchAnalise = function(tab, btn){
 // =====================================================
 function renderMinutos(){
   minMapaMinutos();
+  safeRun(renderMinutosVizinhos,'renderMinutosVizinhos');
   minCadencia();
   minProximoQuente();
   minPorTipo();
@@ -14677,6 +14778,84 @@ function minMapaMinutos(){
 
   // Botão exportar como imagem
   html += '<button onclick="exportarMapaMinutos()" style="width:100%;padding:9px;border-radius:10px;background:#0a1a1a;border:1px solid var(--cyan);color:var(--cyan);font-size:0.5rem;font-weight:700;cursor:pointer;">📸 Exportar como imagem</button>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  DETECTOR DE MINUTOS VIZINHOS (quadras)
+// ══════════════════════════════════════════════
+function renderMinutosVizinhos(){
+  const el = document.getElementById('minutos-vizinhos');
+  if(!el) return;
+
+  const unicos = _dedupUnicos(S.quadras);
+  if(unicos.length<20){
+    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos de quadras para detetar grupos (mínimo 20).</div>';
+    return;
+  }
+
+  const freq = {}, diasPorMinuto = {};
+  for(let m=0;m<60;m++){ freq[m]=0; diasPorMinuto[m]=new Set(); }
+  unicos.forEach(function(e){
+    const m = parseInt(e.hora.split(':')[1]);
+    freq[m]++;
+    diasPorMinuto[m].add(_diaKey(e.ts));
+  });
+
+  // Minutos "fortes": pelo menos 5 dias de amostra e acima da media geral
+  const mediaFreq = unicos.length/60;
+  const fortes = [];
+  for(let m=0;m<60;m++){
+    if(diasPorMinuto[m].size>=5 && freq[m]>mediaFreq){ fortes.push(m); }
+  }
+  fortes.sort(function(a,b){return a-b;});
+
+  if(!fortes.length){
+    el.innerHTML = '<div class="empty">Ainda sem minutos com sinal forte o suficiente para agrupar.</div>';
+    return;
+  }
+
+  // Agrupa minutos fortes que estao a <=3 min uns dos outros
+  const clusters = [];
+  let atual = [fortes[0]];
+  for(let i=1;i<fortes.length;i++){
+    if(fortes[i]-fortes[i-1]<=3){ atual.push(fortes[i]); }
+    else { clusters.push(atual); atual=[fortes[i]]; }
+  }
+  clusters.push(atual);
+
+  // So interessam clusters com 2+ minutos vizinhos
+  const multiplos = clusters.filter(function(c){ return c.length>=2; });
+  if(!multiplos.length){
+    el.innerHTML = '<div class="empty">Ainda sem grupos de 2+ minutos vizinhos — os minutos fortes estão espalhados.</div>';
+    return;
+  }
+
+  const grupos = multiplos.map(function(c){
+    const total = c.reduce(function(a,m){return a+freq[m];},0);
+    const diasUnicos = new Set();
+    c.forEach(function(m){ diasPorMinuto[m].forEach(function(d){ diasUnicos.add(d); }); });
+    return { membros:c, total:total, dias:diasUnicos.size };
+  }).sort(function(a,b){ return b.total-a.total; });
+
+  const hojeKey = _diaKey(Date.now());
+  const jaSaiuHojeMinuto = new Set();
+  unicos.forEach(function(e){ if(_diaKey(e.ts)===hojeKey) jaSaiuHojeMinuto.add(parseInt(e.hora.split(':')[1])); });
+
+  let html = grupos.slice(0,6).map(function(g){
+    const rangeStr = g.membros.length>1 ? ':'+pad(g.membros[0])+'-:'+pad(g.membros[g.membros.length-1]) : ':'+pad(g.membros[0]);
+    const bateuHoje = g.membros.some(function(m){ return jaSaiuHojeMinuto.has(m); });
+    return '<div style="background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
+      +'<div style="display:flex;align-items:center;gap:6px;">'
+      +'<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:#e879f9;">'+rangeStr+'</span>'
+      +'<span style="font-size:0.4rem;color:var(--dim2);">('+g.membros.length+' minutos vizinhos)</span>'
+      +(bateuHoje?'<span style="margin-left:auto;font-size:0.42rem;color:var(--green);">✅ já bateu hoje</span>':'')
+      +'</div>'
+      +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:2px;">'+g.total+'x no total, em '+g.dias+' dias distintos</div>'
+      +'</div>';
+  }).join('');
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Grupos de minutos fortes a ≤3min uns dos outros — indica onde a "janela" de captura é mais larga, não só um minuto isolado.</div>';
 
   el.innerHTML = html;
 }
