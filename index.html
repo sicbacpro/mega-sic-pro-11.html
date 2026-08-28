@@ -1609,6 +1609,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="padrao-mes" style="padding:8px;"></div>
   </div>
 
+  <!-- CRUZAMENTO TERMOMETRO + PADRAO DO MES -->
+  <div class="card" style="border-color:#3a2a4a;margin-bottom:10px;background:linear-gradient(135deg,#120a1a,#0e0814);">
+    <div class="ch" style="border-color:#3a2a4a;">
+      <div class="ci" style="background:#120a1a;">🔀</div>
+      <div><div class="ct" style="color:#c084fc;">Termómetro + Padrão do Mês</div><div class="cs">Os dois sinais concordam hoje, ou contradizem-se?</div></div>
+    </div>
+    <div id="cruzamento-sinais" style="padding:8px;"></div>
+  </div>
+
   <!-- RESUMO HOJE -->
   <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;background:linear-gradient(135deg,#0a1408,#0c160a);">
     <div class="ch" style="border-color:#2a3a1a;">
@@ -1625,6 +1634,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:#fb7185;">Termómetro do Dia</div><div class="cs">Triplos e Quadras, cada um com o seu próprio ciclo</div></div>
     </div>
     <div id="termometro-dia" style="padding:8px;"></div>
+  </div>
+
+  <!-- VELOCIDADE DE RECUPERACAO -->
+  <div class="card" style="border-color:#0a3a3a;margin-bottom:10px;background:linear-gradient(135deg,#04181a,#041414);">
+    <div class="ch" style="border-color:#0a3a3a;">
+      <div class="ci" style="background:#04181a;">⚡</div>
+      <div><div class="ct" style="color:#2dd4bf;">Velocidade de Recuperação</div><div class="cs">Quanto tempo demora tipicamente a sair de um vale</div></div>
+    </div>
+    <div id="velocidade-recuperacao" style="padding:8px;"></div>
   </div>
 
   <!-- SESSAO GEMEA -->
@@ -8755,6 +8773,8 @@ function renderPadroes(){
   safeRun(renderPadraoMes,'renderPadraoMes');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderTermometroDia,'renderTermometroDia');
+  safeRun(renderVelocidadeRecuperacao,'renderVelocidadeRecuperacao');
+  safeRun(renderCruzamentoSinais,'renderCruzamentoSinais');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
   safeRun(renderExplosaoNoturna,'renderExplosaoNoturna');
   safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
@@ -9350,15 +9370,9 @@ function renderSequenciasLongas(){
 // ══════════════════════════════════════════════
 //  PADRAO DO MES (inicio seco, meio forte?)
 // ══════════════════════════════════════════════
-function renderPadraoMes(){
-  const el = document.getElementById('padrao-mes');
-  if(!el) return;
-
+function calcularPadraoMes(){
   const unicos = _dedupUnicos(S.quadras);
-  if(unicos.length<30){
-    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos para testar isto (mínimo 30).</div>';
-    return;
-  }
+  if(unicos.length<30) return null;
 
   const porDia = {}, mesesObs = {};
   for(let d=1;d<=31;d++){ porDia[d]=0; mesesObs[d]=new Set(); }
@@ -9381,6 +9395,26 @@ function renderPadraoMes(){
   const taxaMeio = meio.meses ? meio.tot/meio.meses : 0;
   const taxaFim = fim.meses ? fim.tot/fim.meses : 0;
 
+  const hojeDia = new Date().getDate();
+  const blocoHoje = hojeDia<=10 ? 'início' : (hojeDia<=20 ? 'meio' : 'fim');
+  const taxaBlocoHoje = hojeDia<=10 ? taxaInicio : (hojeDia<=20 ? taxaMeio : taxaFim);
+  const mediaGeral = (taxaInicio+taxaMeio+taxaFim)/3;
+  const favoravel = taxaBlocoHoje >= mediaGeral;
+
+  return { porDia:porDia, mesesObs:mesesObs, maxMeses:maxMeses, taxaInicio:taxaInicio, taxaMeio:taxaMeio, taxaFim:taxaFim, hojeDia:hojeDia, blocoHoje:blocoHoje, taxaBlocoHoje:taxaBlocoHoje, mediaGeral:mediaGeral, favoravel:favoravel };
+}
+
+function renderPadraoMes(){
+  const el = document.getElementById('padrao-mes');
+  if(!el) return;
+
+  const pm = calcularPadraoMes();
+  if(!pm){
+    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos para testar isto (mínimo 30).</div>';
+    return;
+  }
+  const porDia = pm.porDia, mesesObs = pm.mesesObs;
+
   const maxV = Math.max.apply(null, [1].concat(Object.keys(porDia).map(function(d){
     const nm = mesesObs[d].size; return nm ? porDia[d]/nm : 0;
   })));
@@ -9401,26 +9435,76 @@ function renderPadraoMes(){
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">'
     +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
     +'<div style="font-size:0.4rem;color:#38bdf8;">Início (1-10)</div>'
-    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+taxaInicio.toFixed(1)+'</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+pm.taxaInicio.toFixed(1)+'</div>'
     +'<div style="font-size:0.36rem;color:var(--dim2);">/mês</div>'
     +'</div>'
     +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
     +'<div style="font-size:0.4rem;color:#4ade80;">Meio (11-20)</div>'
-    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+taxaMeio.toFixed(1)+'</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+pm.taxaMeio.toFixed(1)+'</div>'
     +'<div style="font-size:0.36rem;color:var(--dim2);">/mês</div>'
     +'</div>'
     +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
     +'<div style="font-size:0.4rem;color:#f97316;">Fim (21-31)</div>'
-    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+taxaFim.toFixed(1)+'</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--text);">'+pm.taxaFim.toFixed(1)+'</div>'
     +'<div style="font-size:0.36rem;color:var(--dim2);">/mês</div>'
     +'</div>'
     +'</div>';
 
-  const hojeDia = new Date().getDate();
-  const blocoHoje = hojeDia<=10 ? 'início' : (hojeDia<=20 ? 'meio' : 'fim');
-  html += '<div style="font-size:0.46rem;color:var(--text);background:#0a0a14;border-radius:8px;padding:7px 9px;">📅 Hoje é dia '+hojeDia+' — está no bloco de <b style="color:var(--cyan);">'+blocoHoje+'</b> do mês.</div>';
+  html += '<div style="font-size:0.46rem;color:var(--text);background:#0a0a14;border-radius:8px;padding:7px 9px;">📅 Hoje é dia '+pm.hojeDia+' — está no bloco de <b style="color:var(--cyan);">'+pm.blocoHoje+'</b> do mês.</div>';
 
-  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">⚠️ Amostra ainda de apenas '+maxMeses+' mês(es) completo(s) — os dias mais claros/transparentes no gráfico têm menos de 2 meses de dados, trata com mais cautela. Confirma com mais meses de histórico.</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">⚠️ Amostra ainda de apenas '+pm.maxMeses+' mês(es) completo(s) — os dias mais claros/transparentes no gráfico têm menos de 2 meses de dados, trata com mais cautela. Confirma com mais meses de histórico.</div>';
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  CRUZAMENTO TERMOMETRO + PADRAO DO MES
+// ══════════════════════════════════════════════
+function renderCruzamentoSinais(){
+  const el = document.getElementById('cruzamento-sinais');
+  if(!el) return;
+
+  const term = calcularTermometro();
+  const pm = calcularPadraoMes();
+
+  if(!term || !pm){
+    el.innerHTML = '<div class="empty">Ainda sem dados suficientes de ambos os sinais para cruzar.</div>';
+    return;
+  }
+
+  const fasesFav = ['subida','perto_topo'];
+  const termQFav = term.quadras.fase && fasesFav.indexOf(term.quadras.fase)>=0;
+  const termTFav = term.triplos.fase && fasesFav.indexOf(term.triplos.fase)>=0;
+  const termFav = termQFav || termTFav;
+  const mesFav = pm.favoravel;
+
+  let status, cor, emoji;
+  if(termFav && mesFav){
+    status = 'Os dois sinais concordam: bloco de mês favorável ('+pm.blocoHoje+') + Termómetro em subida/perto do topo. Reforço de confiança.';
+    cor='var(--green)'; emoji='🟢';
+  } else if(!termFav && !mesFav){
+    status = 'Os dois sinais concordam: bloco de mês mais fraco ('+pm.blocoHoje+') + Termómetro em descida/longe do topo. Reforço de cautela.';
+    cor='#ef4444'; emoji='🔴';
+  } else {
+    status = 'Os sinais contradizem-se: um aponta para cima, o outro para baixo. Mais incerteza que o normal — os dados podem estar em transição.';
+    cor='#fbbf24'; emoji='🟡';
+  }
+
+  let html = '<div style="text-align:center;padding:6px 0 8px;">'
+    +'<div style="font-size:1.6rem;">'+emoji+'</div>'
+    +'</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">🌡️ Termómetro</div>'
+    +'<div style="font-size:0.44rem;color:'+(termFav?'var(--green)':'#ef4444')+';font-weight:700;">'+(termFav?'favorável':'não favorável')+'</div>'
+    +'</div>'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">📆 Padrão do Mês</div>'
+    +'<div style="font-size:0.44rem;color:'+(mesFav?'var(--green)':'#ef4444')+';font-weight:700;">'+pm.blocoHoje+' ('+(mesFav?'favorável':'abaixo da média')+')</div>'
+    +'</div>'
+    +'</div>';
+  html += '<div style="background:#0a0a14;border-radius:8px;padding:8px 9px;font-size:0.46rem;color:'+cor+';line-height:1.6;">'+status+'</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">⚠️ Cruzamento de dois padrões passados — quando concordam, é mais sinal; quando discordam, é mais incerteza, não um terceiro veredito.</div>';
 
   el.innerHTML = html;
 }
@@ -9704,6 +9788,61 @@ function renderTermometroDia(){
   html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;text-align:center;">🔴 pico · 🟢 vale &nbsp;|&nbsp; ⚠️ Padrão de ondas passado — não garante o dia de hoje.</div>';
 
   el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  VELOCIDADE DE RECUPERACAO (vale -> proximo pico)
+// ══════════════════════════════════════════════
+function renderVelocidadeRecuperacao(){
+  const el = document.getElementById('velocidade-recuperacao');
+  if(!el) return;
+
+  const r = calcularTermometro();
+  if(!r){
+    el.innerHTML = '<div class="empty">Ainda sem dados suficientes para calcular isto.</div>';
+    return;
+  }
+
+  function calcularVelocidade(serie){
+    const picos = serie.picos.slice().sort(function(a,b){return a.data-b.data;});
+    const vales = serie.vales.slice().sort(function(a,b){return a.data-b.data;});
+    const distancias = [];
+    vales.forEach(function(v){
+      const proxPico = picos.find(function(p){ return p.data>v.data; });
+      if(proxPico){
+        distancias.push(Math.round((proxPico.data-v.data)/86400000));
+      }
+    });
+    if(!distancias.length) return null;
+    const media = distancias.reduce(function(a,b){return a+b;},0)/distancias.length;
+    const min = Math.min.apply(null,distancias), max = Math.max.apply(null,distancias);
+    return { media:media, min:min, max:max, n:distancias.length };
+  }
+
+  const vT = calcularVelocidade(r.triplos);
+  const vQ = calcularVelocidade(r.quadras);
+
+  if(!vT && !vQ){
+    el.innerHTML = '<div class="empty">Ainda sem pares vale→pico suficientes no histórico.</div>';
+    return;
+  }
+
+  function bloco(v, nome, cor){
+    if(!v) return '<div style="font-size:0.44rem;color:var(--dim2);">'+nome+': sem dados suficientes.</div>';
+    return '<div style="background:#0a0a14;border-radius:8px;padding:8px;text-align:center;">'
+      +'<div style="font-size:0.44rem;color:'+cor+';font-weight:700;">'+nome+'</div>'
+      +'<div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--text);">'+v.media.toFixed(1)+'d</div>'
+      +'<div style="font-size:0.38rem;color:var(--dim2);">média · varia entre '+v.min+'-'+v.max+'d · '+v.n+' casos</div>'
+      +'</div>';
+  }
+
+  let html2 = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +bloco(vT,'🟢 Triplos','var(--green)')
+    +bloco(vQ,'🟡 Quadras','var(--gold)')
+    +'</div>';
+  html2 += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">💡 Tempo típico entre um vale e o pico seguinte. Se estiveres num vale há mais tempo do que esta média, a recuperação pode já estar atrasada.</div>';
+
+  el.innerHTML = html2;
 }
 
 // ══════════════════════════════════════════════
@@ -14843,19 +14982,45 @@ function renderMinutosVizinhos(){
   const jaSaiuHojeMinuto = new Set();
   unicos.forEach(function(e){ if(_diaKey(e.ts)===hojeKey) jaSaiuHojeMinuto.add(parseInt(e.hora.split(':')[1])); });
 
-  let html = grupos.slice(0,6).map(function(g){
+  const gruposComStatus = grupos.map(function(g){
+    return Object.assign({}, g, { bateuHoje: g.membros.some(function(m){ return jaSaiuHojeMinuto.has(m); }) });
+  });
+
+  // Confirmacao Total: todos os grupos ja bateram hoje
+  let bannerConfirmacao = '';
+  if(gruposComStatus.length>=2 && gruposComStatus.every(function(g){ return g.bateuHoje; })){
+    try{
+      const registo = JSON.parse(localStorage.getItem('pro_dias_excecionais')||'[]');
+      if(registo.indexOf(hojeKey)<0){
+        registo.push(hojeKey);
+        localStorage.setItem('pro_dias_excecionais', JSON.stringify(registo));
+      }
+    }catch(e){}
+    bannerConfirmacao = '<div style="background:#2a0a2a;border:1.5px solid #e879f9;border-radius:8px;padding:8px 10px;margin-bottom:8px;">'
+      +'<div style="font-size:0.54rem;font-weight:700;color:#e879f9;">🎯 Confirmação Total!</div>'
+      +'<div style="font-size:0.44rem;color:var(--text);margin-top:2px;">Todos os '+gruposComStatus.length+' grupos de minutos vizinhos já bateram hoje — dia guardado como "excecional" para comparares no futuro.</div>'
+      +'</div>';
+  }
+
+  let html = bannerConfirmacao + gruposComStatus.slice(0,6).map(function(g){
     const rangeStr = g.membros.length>1 ? ':'+pad(g.membros[0])+'-:'+pad(g.membros[g.membros.length-1]) : ':'+pad(g.membros[0]);
-    const bateuHoje = g.membros.some(function(m){ return jaSaiuHojeMinuto.has(m); });
     return '<div style="background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
       +'<div style="display:flex;align-items:center;gap:6px;">'
       +'<span style="font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:#e879f9;">'+rangeStr+'</span>'
       +'<span style="font-size:0.4rem;color:var(--dim2);">('+g.membros.length+' minutos vizinhos)</span>'
-      +(bateuHoje?'<span style="margin-left:auto;font-size:0.42rem;color:var(--green);">✅ já bateu hoje</span>':'')
+      +(g.bateuHoje?'<span style="margin-left:auto;font-size:0.42rem;color:var(--green);">✅ já bateu hoje</span>':'')
       +'</div>'
       +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:2px;">'+g.total+'x no total, em '+g.dias+' dias distintos</div>'
       +'</div>';
   }).join('');
   html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Grupos de minutos fortes a ≤3min uns dos outros — indica onde a "janela" de captura é mais larga, não só um minuto isolado.</div>';
+
+  try{
+    const registo = JSON.parse(localStorage.getItem('pro_dias_excecionais')||'[]');
+    if(registo.length){
+      html += '<div style="margin-top:8px;font-size:0.42rem;color:var(--dim2);">📔 Dias excecionais registados: '+registo.slice(-8).join(', ')+'</div>';
+    }
+  }catch(e){}
 
   el.innerHTML = html;
 }
