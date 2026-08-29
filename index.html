@@ -607,6 +607,15 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- CENTRAL DE PREPARACAO -->
+  <div class="card" id="card-central-preparacao" data-essencial="1" style="border-color:#3a1a4a;margin-bottom:10px;background:linear-gradient(135deg,#12081a,#0e0614);">
+    <div class="ch" style="border-color:#3a1a4a;">
+      <div class="ci" style="background:#150a20;">🧭</div>
+      <div><div class="ct" style="color:#c084fc;">Central de Preparação</div><div class="cs">Tudo o que precisas de saber já, num só sítio</div></div>
+    </div>
+    <div id="central-preparacao" style="padding:10px;"></div>
+  </div>
+
   <!-- TOGGLE MODO ESSENCIAL -->
   <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
     <button id="btn-modo-essencial" onclick="toggleModoEssencial()" style="font-size:0.44rem;padding:6px 12px;border-radius:20px;background:#0a0a14;border:1px solid var(--border);color:var(--dim2);cursor:pointer;">🎯 Modo Essencial</button>
@@ -8104,6 +8113,101 @@ function setTurno(t){
   safeRun(renderProximaHoraForteTriplo,'renderProximaHoraForteTriplo-turno');
 }
 
+// ══════════════════════════════════════════════
+//  CENTRAL DE PREPARACAO
+// ══════════════════════════════════════════════
+function renderCentralPreparacao(){
+  const el = document.getElementById('central-preparacao');
+  if(!el) return;
+
+  let html = '';
+
+  // 1. Minutos Vizinhos - destaque principal
+  const grupos = calcularMinutosVizinhos();
+  html += '<div style="font-size:0.44rem;color:#e879f9;font-weight:700;letter-spacing:0.06em;margin-bottom:5px;">🧩 MINUTOS (o que mais importa agora)</div>';
+  if(grupos===null){
+    html += '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:8px;">Ainda com poucos dados de quadras.</div>';
+  } else if(!grupos.length){
+    html += '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:8px;">Ainda sem grupos de minutos vizinhos.</div>';
+  } else {
+    const agora = new Date();
+    const minAgora = agora.getMinutes();
+    const grupo = grupos[0];
+    const rangeStr = grupo.membros.length>1 ? ':'+pad(grupo.membros[0])+'-:'+pad(grupo.membros[grupo.membros.length-1]) : ':'+pad(grupo.membros[0]);
+    const diff = grupo.membros[0]-minAgora;
+    let statusMin;
+    if(grupo.bateuHoje){ statusMin = '<span style="color:var(--green);">✅ já bateu hoje</span>'; }
+    else if(diff>=1 && diff<=5){ statusMin = '<span style="color:#fbbf24;">⏳ entra daqui a '+diff+'min — fica atenta!</span>'; }
+    else { statusMin = '<span style="color:var(--dim2);">ainda não chegou a esta hora</span>'; }
+    html += '<div style="background:#0a0a14;border-radius:8px;padding:8px 10px;margin-bottom:8px;">'
+      +'<div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:#e879f9;">'+rangeStr+'</div>'
+      +'<div style="font-size:0.44rem;margin-top:2px;">'+statusMin+'</div>'
+      +'</div>';
+  }
+
+  // 2. Proxima Hora Forte (Quadras + Triplos)
+  html += '<div style="font-size:0.44rem;color:var(--orange);font-weight:700;letter-spacing:0.06em;margin-bottom:5px;">🔥 PRÓXIMA HORA FORTE</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">';
+  if(typeof computarCiclosHora==='function'){
+    const ciclos = computarCiclosHora();
+    if(ciclos.length){
+      const q = ciclos[0];
+      const emoji = q.cor==='#ef4444'?'🔴':(q.cor==='#fbbf24'?'🟡':'🟢');
+      html += '<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;"><div style="font-size:0.4rem;color:var(--dim2);">Quadras</div><div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--gold);">'+pad(q.h)+'h</div><div style="font-size:0.38rem;">'+emoji+'</div></div>';
+    } else {
+      html += '<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;font-size:0.4rem;color:var(--dim2);">sem dados</div>';
+    }
+  }
+  html += '<div id="central-prep-triplo" style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;font-size:0.4rem;color:var(--dim2);">…</div>';
+  html += '</div>';
+
+  // 3. Confianca do Dia (resumido)
+  if(typeof calcularTermometro==='function'){
+    const term = calcularTermometro();
+    const pm = typeof calcularPadraoMes==='function' ? calcularPadraoMes() : null;
+    let nFav=0, nTot=0;
+    if(term){
+      const fasesFav=['subida','perto_topo'];
+      nTot++; if((term.quadras.fase&&fasesFav.indexOf(term.quadras.fase)>=0)||(term.triplos.fase&&fasesFav.indexOf(term.triplos.fase)>=0)) nFav++;
+    }
+    if(pm){ nTot++; if(pm.favoravel) nFav++; }
+    if(nTot>0){
+      const emoji = nFav===nTot ? '🟢' : (nFav===0 ? '🔴' : '🟡');
+      html += '<div style="font-size:0.44rem;color:var(--dim2);">'+emoji+' '+nFav+' de '+nTot+' sinais gerais a favor hoje — ver Confiança do Dia abaixo para detalhe.</div>';
+    }
+  }
+
+  // 4. Estado dos alertas
+  const vozAtiva = localStorage.getItem('pro_voz_alertas')!=='off';
+  const notifOk = typeof Notification!=='undefined' && Notification.permission==='granted';
+  html += '<div style="display:flex;gap:10px;margin-top:8px;font-size:0.4rem;color:var(--dim2);">'
+    +'<span>'+(vozAtiva?'🔊 voz ligada':'🔇 voz desligada')+'</span>'
+    +'<span>'+(notifOk?'🔔 notificações ok':'⚠️ notificações não autorizadas')+'</span>'
+    +'</div>';
+
+  el.innerHTML = html;
+
+  // Preenche a parte dos triplos de forma assincrona-leve (reutiliza a logica ja existente)
+  safeRun(function(){
+    const elT = document.getElementById('central-prep-triplo');
+    if(!elT) return;
+    const unicos = _dedupUnicos(S.triplos);
+    const freq={}, diasPorHora={};
+    for(let h=0;h<24;h++){ freq[h]=0; diasPorHora[h]=new Set(); }
+    unicos.forEach(function(e){ const h=parseInt(e.hora.split(':')[0]); freq[h]++; diasPorHora[h].add(_diaKey(e.ts)); });
+    const hojeKey = _diaKey(Date.now());
+    const jaSaiuHoje={}; unicos.forEach(function(e){ if(_diaKey(e.ts)===hojeKey) jaSaiuHoje[parseInt(e.hora.split(':')[0])]=true; });
+    const ranking=[];
+    for(let h=0;h<24;h++){ const dias=diasPorHora[h].size; if(dias<5) continue; ranking.push({h:h, taxa:freq[h]/dias, jaSaiu: !!jaSaiuHoje[h]}); }
+    ranking.sort(function(a,b){return b.taxa-a.taxa;});
+    const semSair = ranking.filter(function(r){return !r.jaSaiu;});
+    const alvo = semSair.length ? semSair[0] : ranking[0];
+    if(alvo){
+      elT.innerHTML = '<div style="font-size:0.4rem;color:var(--dim2);">Triplos</div><div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--green);">'+pad(alvo.h)+'h</div><div style="font-size:0.38rem;">'+(alvo.jaSaiu?'⚠️ já saiu':'✅ por sair')+'</div>';
+    }
+  }, 'central-prep-triplo-calc');
+}
+
 function renderConfiancaDia(){
   const el = document.getElementById('confianca-dia');
   if(!el) return;
@@ -8310,6 +8414,7 @@ function renderDashboard(){
   if(dc) dc.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`;
 
   renderTimers();
+  safeRun(renderCentralPreparacao,'renderCentralPreparacao');
   safeRun(renderConfiancaDia,'renderConfiancaDia');
   safeRun(renderProximaHoraForte,'renderProximaHoraForte');
   safeRun(renderProximaHoraForteTriplo,'renderProximaHoraForteTriplo');
@@ -14924,15 +15029,9 @@ function minMapaMinutos(){
 // ══════════════════════════════════════════════
 //  DETECTOR DE MINUTOS VIZINHOS (quadras)
 // ══════════════════════════════════════════════
-function renderMinutosVizinhos(){
-  const el = document.getElementById('minutos-vizinhos');
-  if(!el) return;
-
+function calcularMinutosVizinhos(){
   const unicos = _dedupUnicos(S.quadras);
-  if(unicos.length<20){
-    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos de quadras para detetar grupos (mínimo 20).</div>';
-    return;
-  }
+  if(unicos.length<20) return null;
 
   const freq = {}, diasPorMinuto = {};
   for(let m=0;m<60;m++){ freq[m]=0; diasPorMinuto[m]=new Set(); }
@@ -14942,20 +15041,14 @@ function renderMinutosVizinhos(){
     diasPorMinuto[m].add(_diaKey(e.ts));
   });
 
-  // Minutos "fortes": pelo menos 5 dias de amostra e acima da media geral
   const mediaFreq = unicos.length/60;
   const fortes = [];
   for(let m=0;m<60;m++){
     if(diasPorMinuto[m].size>=5 && freq[m]>mediaFreq){ fortes.push(m); }
   }
   fortes.sort(function(a,b){return a-b;});
+  if(!fortes.length) return [];
 
-  if(!fortes.length){
-    el.innerHTML = '<div class="empty">Ainda sem minutos com sinal forte o suficiente para agrupar.</div>';
-    return;
-  }
-
-  // Agrupa minutos fortes que estao a <=3 min uns dos outros
   const clusters = [];
   let atual = [fortes[0]];
   for(let i=1;i<fortes.length;i++){
@@ -14964,29 +15057,38 @@ function renderMinutosVizinhos(){
   }
   clusters.push(atual);
 
-  // So interessam clusters com 2+ minutos vizinhos
   const multiplos = clusters.filter(function(c){ return c.length>=2; });
-  if(!multiplos.length){
-    el.innerHTML = '<div class="empty">Ainda sem grupos de 2+ minutos vizinhos — os minutos fortes estão espalhados.</div>';
-    return;
-  }
-
-  const grupos = multiplos.map(function(c){
-    const total = c.reduce(function(a,m){return a+freq[m];},0);
-    const diasUnicos = new Set();
-    c.forEach(function(m){ diasPorMinuto[m].forEach(function(d){ diasUnicos.add(d); }); });
-    return { membros:c, total:total, dias:diasUnicos.size };
-  }).sort(function(a,b){ return b.total-a.total; });
+  if(!multiplos.length) return [];
 
   const hojeKey = _diaKey(Date.now());
   const jaSaiuHojeMinuto = new Set();
   unicos.forEach(function(e){ if(_diaKey(e.ts)===hojeKey) jaSaiuHojeMinuto.add(parseInt(e.hora.split(':')[1])); });
 
-  const gruposComStatus = grupos.map(function(g){
-    return Object.assign({}, g, { bateuHoje: g.membros.some(function(m){ return jaSaiuHojeMinuto.has(m); }) });
-  });
+  const grupos = multiplos.map(function(c){
+    const total = c.reduce(function(a,m){return a+freq[m];},0);
+    const diasUnicos = new Set();
+    c.forEach(function(m){ diasPorMinuto[m].forEach(function(d){ diasUnicos.add(d); }); });
+    return { membros:c, total:total, dias:diasUnicos.size, bateuHoje: c.some(function(m){ return jaSaiuHojeMinuto.has(m); }) };
+  }).sort(function(a,b){ return b.total-a.total; });
 
-  // Confirmacao Total: todos os grupos ja bateram hoje
+  return grupos;
+}
+
+function renderMinutosVizinhos(){
+  const el = document.getElementById('minutos-vizinhos');
+  if(!el) return;
+
+  const gruposComStatus = calcularMinutosVizinhos();
+  if(gruposComStatus===null){
+    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos de quadras para detetar grupos (mínimo 20).</div>';
+    return;
+  }
+  if(!gruposComStatus.length){
+    el.innerHTML = '<div class="empty">Ainda sem grupos de 2+ minutos vizinhos com sinal forte o suficiente.</div>';
+    return;
+  }
+
+  const hojeKey = _diaKey(Date.now());
   let bannerConfirmacao = '';
   if(gruposComStatus.length>=2 && gruposComStatus.every(function(g){ return g.bateuHoje; })){
     try{
@@ -15023,6 +15125,33 @@ function renderMinutosVizinhos(){
   }catch(e){}
 
   el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  AVISO ANTECIPADO - MINUTOS VIZINHOS (poucos minutos antes da janela)
+// ══════════════════════════════════════════════
+function checkAvisoMinutosVizinhos(){
+  const grupos = calcularMinutosVizinhos();
+  if(!grupos || !grupos.length) return;
+
+  const agora = new Date();
+  const minAgora = agora.getMinutes();
+  const horaAgora = agora.getHours();
+
+  grupos.forEach(function(g){
+    const inicio = g.membros[0];
+    const diff = inicio - minAgora; // positivo = ainda vem ai, dentro da mesma hora
+    if(diff<1 || diff>5) return; // so avisa entre 1 e 5 minutos antes
+
+    const chave = 'pro_aviso_minvizinho_'+_diaKey(Date.now())+'_'+horaAgora+'_'+inicio;
+    if(localStorage.getItem(chave)==='1') return;
+    localStorage.setItem(chave, '1');
+
+    const rangeStr = g.membros.length>1 ? ':'+pad(g.membros[0])+'-:'+pad(g.membros[g.membros.length-1]) : ':'+pad(g.membros[0]);
+    showToast('🧩 Daqui a '+diff+'min entra a janela '+rangeStr+' (minutos fortes)','gold');
+    falarAlerta('Atenção. Daqui a '+diff+' minutos entra a janela de minutos fortes, '+rangeStr.replace(/:/g,' ')+'.');
+    if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([120,60,120]);
+  });
 }
 
 function exportarMapaMinutos(){
@@ -18780,6 +18909,7 @@ setInterval(()=>{
   safeRun(checkPatternAlerts,'checkPatternAlerts');
   safeRun(checkConquistas,'checkConquistas');
   safeRun(checkAlertaTermometro,'checkAlertaTermometro');
+  safeRun(checkAvisoMinutosVizinhos,'checkAvisoMinutosVizinhos');
   safeRun(checkRelatorioSemanalAuto,'checkRelatorioSemanalAuto');
 },5000);
 // Init turbo buttons
