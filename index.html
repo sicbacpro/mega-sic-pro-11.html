@@ -15095,11 +15095,40 @@ function calcularMinutosVizinhos(){
   const jaSaiuHojeMinuto = new Set();
   unicos.forEach(function(e){ if(_diaKey(e.ts)===hojeKey) jaSaiuHojeMinuto.add(parseInt(e.hora.split(':')[1])); });
 
+  // Todos os dias distintos com pelo menos 1 quadra (denominador para taxa de acerto)
+  const diasComDados = [];
+  const diasComDadosSet = {};
+  unicos.forEach(function(e){
+    const dk = _diaKey(e.ts);
+    if(!diasComDadosSet[dk]){ diasComDadosSet[dk]=true; diasComDados.push({key:dk, data: new Date(e.ts)}); }
+  });
+  diasComDados.sort(function(a,b){ return b.data-a.data; }); // mais recente primeiro
+  const hojeD = new Date(); const hojeSemHora = new Date(hojeD.getFullYear(),hojeD.getMonth(),hojeD.getDate());
+
   const grupos = multiplos.map(function(c){
     const total = c.reduce(function(a,m){return a+freq[m];},0);
     const diasUnicos = new Set();
     c.forEach(function(m){ diasPorMinuto[m].forEach(function(d){ diasUnicos.add(d); }); });
-    return { membros:c, total:total, dias:diasUnicos.size, bateuHoje: c.some(function(m){ return jaSaiuHojeMinuto.has(m); }) };
+
+    // Mapa dia -> teve hit deste grupo
+    const hitPorDia = {};
+    unicos.forEach(function(e){
+      const m = parseInt(e.hora.split(':')[1]);
+      if(c.indexOf(m)>=0) hitPorDia[_diaKey(e.ts)] = true;
+    });
+    const taxaAcerto = diasComDados.length ? Math.round(Object.keys(hitPorDia).length/diasComDados.length*100) : 0;
+
+    // Sequencia de dias consecutivos em acerto (a partir de hoje/ontem, para tras)
+    let streak = 0;
+    for(let i=0;i<diasComDados.length;i++){
+      const d = diasComDados[i];
+      // Ignora hoje se ainda nao bateu (dia incompleto nao quebra a sequencia)
+      if(d.key===hojeKey && !hitPorDia[hojeKey]) continue;
+      if(hitPorDia[d.key]) streak++;
+      else break;
+    }
+
+    return { membros:c, total:total, dias:diasUnicos.size, bateuHoje: c.some(function(m){ return jaSaiuHojeMinuto.has(m); }), taxaAcerto:taxaAcerto, streak:streak };
   }).sort(function(a,b){ return b.total-a.total; });
 
   return grupos;
@@ -15135,7 +15164,15 @@ function renderMinutosVizinhos(){
       +'</div>';
   }
 
-  let html = bannerConfirmacao + gruposComStatus.slice(0,6).map(function(g){
+  // Foco do Dia: barra de progresso
+  const nCapturados = gruposComStatus.filter(function(g){ return g.bateuHoje; }).length;
+  const pctFoco = Math.round(nCapturados/gruposComStatus.length*100);
+  let barraFoco = '<div style="margin-bottom:8px;">'
+    +'<div style="display:flex;justify-content:space-between;font-size:0.42rem;color:var(--dim2);margin-bottom:3px;"><span>📊 Foco do Dia</span><span>'+nCapturados+' de '+gruposComStatus.length+' grupos capturados</span></div>'
+    +'<div style="height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+pctFoco+'%;background:linear-gradient(90deg,#e879f9,#4ade80);"></div></div>'
+    +'</div>';
+
+  let html = barraFoco + bannerConfirmacao + gruposComStatus.slice(0,6).map(function(g){
     const rangeStr = g.membros.length>1 ? ':'+pad(g.membros[0])+'-:'+pad(g.membros[g.membros.length-1]) : ':'+pad(g.membros[0]);
     return '<div style="background:#0a0a14;border-radius:8px;padding:7px 9px;margin-bottom:5px;">'
       +'<div style="display:flex;align-items:center;gap:6px;">'
@@ -15144,6 +15181,7 @@ function renderMinutosVizinhos(){
       +(g.bateuHoje?'<span style="margin-left:auto;font-size:0.42rem;color:var(--green);">✅ já bateu hoje</span>':'')
       +'</div>'
       +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:2px;">'+g.total+'x no total, em '+g.dias+' dias distintos</div>'
+      +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:2px;">🎯 acerta em <b style="color:var(--text);">'+g.taxaAcerto+'%</b> dos dias'+(g.streak>=2?' &nbsp;·&nbsp; 🔥 <b style="color:#f97316;">'+g.streak+' dias seguidos</b> a bater':'')+'</div>'
       +'</div>';
   }).join('');
   html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Grupos de minutos fortes a ≤3min uns dos outros — indica onde a "janela" de captura é mais larga, não só um minuto isolado.</div>';
