@@ -12125,6 +12125,8 @@ function dismissAlert(){
   clearTimeout(patternAlertTimer);
   stopAlertSound();
   stopVibrate();
+  try{ if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }catch(e){}
+  _filaVozCount = 0;
 }
 
 function pararTudo(){
@@ -18201,15 +18203,19 @@ function alarmeQuadrasRemoverHora(h){
   renderAlarmeQuadrasConfig();
 }
 
+let _filaVozCount = 0;
 function falarAlerta(texto){
   try{
     if(typeof speechSynthesis==='undefined') return;
     if(localStorage.getItem('pro_voz_alertas')==='off') return;
-    speechSynthesis.cancel();
+    if(_filaVozCount>=3) return; // evita acumular alertas de voz a mais
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'pt-PT';
     u.rate = 1;
     u.volume = 1;
+    _filaVozCount++;
+    u.onend = function(){ _filaVozCount = Math.max(0,_filaVozCount-1); };
+    u.onerror = function(){ _filaVozCount = Math.max(0,_filaVozCount-1); };
     speechSynthesis.speak(u);
   }catch(e){}
 }
