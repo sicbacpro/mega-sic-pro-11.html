@@ -12455,13 +12455,13 @@ function updatePlanCountdown(){
     if(minDiff===5 && !planoAlertado['5min']){
       planoAlertado['5min']=true;
       showPatternAlert('⏰ Sessão começa em 5 minutos!','janela');
-      playAlert();
+      if(_somDeAlarmeAtivo()) playAlert();
       
     }
     if(minDiff===0 && !planoAlertado['inicio']){
       planoAlertado['inicio']=true;
       showPatternAlert('🎮 SESSÃO A COMEÇAR AGORA!','janela');
-      playQuadra();
+      if(_somDeAlarmeAtivo()) playQuadra();
       
     }
   }
@@ -12473,7 +12473,7 @@ function updatePlanCountdown(){
     if(diffFim===5 && !planoAlertado['fim5']){
       planoAlertado['fim5']=true;
       showPatternAlert('⚠️ Sessão termina em 5 minutos!','streak');
-      playAlert();
+      if(_somDeAlarmeAtivo()) playAlert();
       
     }
     if(diffFim<=0 && !planoAlertado['fim']){
@@ -12481,7 +12481,7 @@ function updatePlanCountdown(){
       planoAtivo.sessoesConcluidas=(planoAtivo.sessoesConcluidas||0)+1;
       savePlanos();
       showPatternAlert('🏁 SESSÃO TERMINADA! Bom jogo!','quadra');
-      playQuadra();
+      if(_somDeAlarmeAtivo()) playQuadra();
       
     }
   }
@@ -18219,6 +18219,14 @@ function falarAlerta(texto){
     speechSynthesis.speak(u);
   }catch(e){}
 }
+function toggleAlarmeSoVoz(){
+  const atual = localStorage.getItem('pro_alarme_so_voz')==='1';
+  localStorage.setItem('pro_alarme_so_voz', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
+function _somDeAlarmeAtivo(){
+  return localStorage.getItem('pro_alarme_so_voz')!=='1';
+}
 function toggleVozAlertas(){
   const atual = localStorage.getItem('pro_voz_alertas')!=='off';
   localStorage.setItem('pro_voz_alertas', atual?'off':'on');
@@ -18227,7 +18235,7 @@ function toggleVozAlertas(){
 }
 function alarmeQuadrasDisparar(motivo){
   if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([200,100,200,100,200]);
-  if(typeof playQuadra==='function') safeRun(playQuadra,'playQuadra-alarme');
+  if(_somDeAlarmeAtivo() && typeof playQuadra==='function') safeRun(playQuadra,'playQuadra-alarme');
   showToast('⏰ '+motivo,'gold');
   falarAlerta('Atenção. Alarme de quadras. '+motivo);
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
@@ -18287,6 +18295,16 @@ function renderAlarmeQuadrasConfig(){
     +toggleBtn(vozAtiva,'toggleVozAlertas()','✅ Ativo','⭘ Desativado')
     +'</div>'
     +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Diz em voz alta quando o alarme de quadras dispara, ou quando o Sniper Mode aponta sinal forte de triplo/quadra.</div>'
+    +'</div>';
+
+  // Bloco 0b: Só voz (sem beeps)
+  const soVozAtivo = localStorage.getItem('pro_alarme_so_voz')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🔇 Só voz (sem beeps)</span>'
+    +toggleBtn(soVozAtivo,'toggleAlarmeSoVoz()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Desliga os sons de beep dos alarmes (Alarme de Quadras, Sniper Mode, alertas de padrão) — a voz e a vibração continuam.</div>'
     +'</div>';
 
   // Bloco 1: Tempo sem sair
@@ -18349,14 +18367,15 @@ const SNIPER_JANELA_RESPOSTA_MIN = 15; // minutos que uma chamada fica "aberta" 
 // "Prepara" (2) ou "Entra Agora" (3). Respeita o interruptor de som já existente (S.sound).
 function _sniperAlertar(urgencia){
   try{
+    const somOk = _somDeAlarmeAtivo();
     if(urgencia>=4){
-      if(typeof playQuadra==='function') playQuadra();
+      if(somOk && typeof playQuadra==='function') playQuadra();
       if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([250,60,250,60,250,60,250]);
     } else if(urgencia>=3){
-      if(typeof playQuadra==='function') playQuadra();
+      if(somOk && typeof playQuadra==='function') playQuadra();
       if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([200,80,200,80,200]);
     } else if(urgencia>=2){
-      if(typeof playAlert==='function') playAlert();
+      if(somOk && typeof playAlert==='function') playAlert();
       if(typeof navigator!=='undefined' && navigator.vibrate) navigator.vibrate([150,80,150]);
     }
   }catch(e){}
