@@ -607,6 +607,9 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
+  <!-- BOTAO DE EMERGENCIA - SILENCIO TOTAL -->
+  <button data-essencial="1" onclick="silencioTotal()" style="width:100%;padding:11px;margin-bottom:10px;border-radius:12px;background:#2a0a0a;border:2px solid #ef4444;color:#ef4444;font-size:0.6rem;font-weight:700;cursor:pointer;">🔇 SILÊNCIO TOTAL (corta tudo agora)</button>
+
   <!-- CENTRAL DE PREPARACAO -->
   <div class="card" id="card-central-preparacao" data-essencial="1" style="border-color:#3a1a4a;margin-bottom:10px;background:linear-gradient(135deg,#12081a,#0e0614);">
     <div class="ch" style="border-color:#3a1a4a;">
@@ -8143,6 +8146,26 @@ function renderCentralPreparacao(){
       +'<div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:#e879f9;">'+rangeStr+'</div>'
       +'<div style="font-size:0.44rem;margin-top:2px;">'+statusMin+'</div>'
       +'</div>';
+
+    // Proximas janelas de hoje (para alarme manual do telemovel, ja que o ecra bloqueado pausa o relogio da app)
+    const top3Grupos = grupos.slice(0,3);
+    const proximas = [];
+    top3Grupos.forEach(function(g){
+      for(let h=agora.getHours(); h<24; h++){
+        const alvoMin = g.membros[0];
+        if(h===agora.getHours() && alvoMin<=minAgora) continue; // ja passou esta hora
+        proximas.push({ h:h, m:alvoMin, rangeStr: g.membros.length>1 ? ':'+pad(g.membros[0])+'-:'+pad(g.membros[g.membros.length-1]) : ':'+pad(g.membros[0]) });
+      }
+    });
+    proximas.sort(function(a,b){ return (a.h*60+a.m)-(b.h*60+b.m); });
+    if(proximas.length){
+      html += '<div style="font-size:0.4rem;color:var(--dim2);margin-bottom:3px;">📋 Próximas janelas de hoje (para pores um alarme do telemóvel, se quiseres garantia total):</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">'
+        +proximas.slice(0,6).map(function(p){
+          return '<span style="font-family:var(--font-mono);font-size:0.42rem;background:#0a0a14;border:1px solid #3a1a3a;border-radius:6px;padding:3px 6px;color:#e879f9;">'+pad(p.h)+':'+pad(p.m)+' <span style="color:var(--dim2);">('+p.rangeStr+')</span></span>';
+        }).join('')
+        +'</div>';
+    }
   }
 
   // 2. Proxima Hora Forte (Quadras + Triplos)
@@ -12127,6 +12150,17 @@ function dismissAlert(){
   stopVibrate();
   try{ if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }catch(e){}
   _filaVozCount = 0;
+  // Corte total de segurança: suspende o AudioContext (para qualquer som agendado, de qualquer origem)
+  try{ if(audioCtx && audioCtx.state==='running') audioCtx.suspend(); }catch(e){}
+}
+function silencioTotal(){
+  dismissAlert();
+  try{
+    alertAudioNodes.forEach(function(n){ try{ n.disconnect(); }catch(e){} });
+    alertAudioNodes = [];
+  }catch(e){}
+  try{ if(audioCtx){ audioCtx.close(); audioCtx=null; } }catch(e){}
+  showToast('🔇 Silêncio total ativado','green');
 }
 
 function pararTudo(){
@@ -18987,6 +19021,14 @@ function renderAll(){
   safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
+function verificacoesLeves(){
+  // Estes são leves (verificações, não reconstroem listas grandes) — mantidos sempre a correr para os alertas funcionarem em qualquer página
+  safeRun(checkPatternAlerts,'checkPatternAlerts');
+  safeRun(checkConquistas,'checkConquistas');
+  safeRun(checkAlertaTermometro,'checkAlertaTermometro');
+  safeRun(checkAvisoMinutosVizinhos,'checkAvisoMinutosVizinhos');
+  safeRun(checkRelatorioSemanalAuto,'checkRelatorioSemanalAuto');
+}
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
   if(ativa('page-dashboard')) safeRun(renderDashboard,'renderDashboard');
@@ -18999,13 +19041,18 @@ setInterval(()=>{
   }
   if(ativa('page-turbo')) safeRun(renderTurboHist,'renderTurboHist');
   if(ativa('page-planeador')) safeRun(renderPlaneador,'renderPlaneador');
-  // Estes são leves (verificações, não reconstroem listas grandes) — mantidos sempre a correr para os alertas funcionarem em qualquer página
-  safeRun(checkPatternAlerts,'checkPatternAlerts');
-  safeRun(checkConquistas,'checkConquistas');
-  safeRun(checkAlertaTermometro,'checkAlertaTermometro');
-  safeRun(checkAvisoMinutosVizinhos,'checkAvisoMinutosVizinhos');
-  safeRun(checkRelatorioSemanalAuto,'checkRelatorioSemanalAuto');
+  verificacoesLeves();
 },5000);
+// Assim que a app volta a ficar visível (desbloqueio do telemóvel, voltar de outra app),
+// verifica imediatamente — o telemóvel pausa o relógio de 5s enquanto está em segundo plano,
+// por isso isto evita perder avisos por o ecrã ter estado bloqueado.
+if(typeof document.addEventListener==='function'){
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='visible'){
+      safeRun(verificacoesLeves,'verificacoesLeves-onvisible');
+    }
+  });
+}
 // Init turbo buttons
 safeRun(()=>setNow('turbo-hora'),'setNow');
 safeRun(()=>setNow('gr-hora'),'setNow-gr');
