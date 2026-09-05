@@ -3166,6 +3166,17 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
     <div style="padding:8px;">
 
+      <!-- Seletor de Dia (fica selecionado ate mudares outra vez) -->
+      <div style="margin-bottom:10px;background:#140a04;border:1px solid #3a2a1a;border-radius:10px;padding:8px;">
+        <div style="font-size:0.46rem;color:#fbbf24;font-weight:700;letter-spacing:0.08em;margin-bottom:6px;">📅 REGISTAR NO DIA</div>
+        <div style="display:flex;gap:5px;margin-bottom:4px;">
+          <button type="button" id="gr-dia-hoje" onclick="grSetDia('hoje')" style="flex:1;padding:8px 4px;border-radius:7px;border:1px solid var(--green);background:var(--green)22;color:var(--green);font-size:0.46rem;font-weight:700;">Hoje</button>
+          <button type="button" id="gr-dia-ontem" onclick="grSetDia('ontem')" style="flex:1;padding:8px 4px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dim2);font-size:0.46rem;font-weight:700;">Ontem</button>
+          <input type="date" id="gr-dia-custom" onchange="grSetDia(this.value)" style="flex:1;padding:8px 4px;border-radius:7px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.44rem;">
+        </div>
+        <div id="gr-dia-aviso"></div>
+      </div>
+
       <!-- Calculadora de Posição integrada -->
       <div style="margin-bottom:10px;background:#04140c;border:1px solid #1a3a2a;border-radius:10px;padding:8px;">
         <div style="font-size:0.46rem;color:#34d399;font-weight:700;letter-spacing:0.08em;margin-bottom:6px;">🧮 CALCULADORA DE POSIÇÃO</div>
@@ -5159,7 +5170,7 @@ function exportJSON(){
 //  GRELHA RAPIDA
 // =====================================
 (function(){
-  const GR = { ultimo: null, par: 'esq' };
+  const GR = { ultimo: null, par: 'esq', dia: 'hoje' };
   window.GR = GR;
 
   function grHojeCount(arr){
@@ -5174,6 +5185,33 @@ function exportJSON(){
     if(elQ) elQ.textContent = grHojeCount(S.quadras);
   }
   window.grAtualizarContadores = grAtualizarContadores;
+
+  window.grSetDia = function(dia){
+    GR.dia = dia;
+    const btnHoje = document.getElementById('gr-dia-hoje');
+    const btnOntem = document.getElementById('gr-dia-ontem');
+    const inpCustom = document.getElementById('gr-dia-custom');
+    function estilo(btn, ativo){
+      if(!btn) return;
+      btn.style.borderColor = ativo ? 'var(--green)' : 'var(--border)';
+      btn.style.background = ativo ? 'var(--green)22' : 'transparent';
+      btn.style.color = ativo ? 'var(--green)' : 'var(--dim2)';
+    }
+    estilo(btnHoje, dia==='hoje');
+    estilo(btnOntem, dia==='ontem');
+    if(dia!=='hoje' && dia!=='ontem' && inpCustom){ inpCustom.value = dia; }
+    if(dia==='hoje' && inpCustom){ inpCustom.value=''; }
+
+    const avisoEl = document.getElementById('gr-dia-aviso');
+    if(avisoEl){
+      if(dia==='hoje'){
+        avisoEl.innerHTML = '';
+      } else {
+        const label = (typeof formatDiaLabel==='function') ? formatDiaLabel(dia) : dia;
+        avisoEl.innerHTML = '<div style="margin-top:4px;padding:6px 8px;background:#3a1a0a;border:1.5px solid #f97316;border-radius:8px;font-size:0.46rem;color:#fdba74;font-weight:700;">⚠️ A registar tudo como <span style="color:#fff;">'+(label||'Ontem')+'</span> — enquanto não mudares, fica assim para todos os toques.</div>';
+      }
+    }
+  };
 
   window.grSetPar = function(lado){
     GR.par = lado;
@@ -5228,7 +5266,7 @@ function exportJSON(){
   window.grRegistar = function(tipo, num){
     const hora = calcularPosicaoGR();
     if(!hora){ showToast('Define a "Hora do topo" primeiro','red'); return; }
-    const ts = calcTsParaDia('hoje', hora);
+    const ts = calcTsParaDia(GR.dia, hora);
     const novo = {hora:hora, num:num, ap:0, gn:0, interval:null, ts:ts};
 
     if(tipo==='triplo'){
@@ -5256,7 +5294,8 @@ function exportJSON(){
     if(el && txt){
       const cor = tipo==='triplo' ? '#4ade80' : '#fbbf24';
       const nome = tipo==='triplo' ? 'TRIPLO' : 'QUADRA';
-      txt.innerHTML = '<b style="color:'+cor+'">'+nome+' '+num+'</b> às '+hora;
+      const diaLbl = (GR.dia!=='hoje' && typeof formatDiaLabel==='function') ? formatDiaLabel(GR.dia) : null;
+      txt.innerHTML = '<b style="color:'+cor+'">'+nome+' '+num+'</b> às '+hora+(diaLbl?' <span style="color:#fbbf24;">('+diaLbl+')</span>':'');
       el.style.display = 'block';
     }
   };
