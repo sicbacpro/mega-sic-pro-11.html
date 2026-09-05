@@ -198,6 +198,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);max-wid
 .cd-val{font-family:var(--font-mono);font-size:0.82rem;font-weight:700;color:var(--green);}
 .countdown.urgent .cd-val{color:var(--red);animation:urgpulse 0.8s infinite;}
 @keyframes urgpulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes glowpulse{0%,100%{box-shadow:0 0 4px 0px rgba(232,121,249,0.3)}50%{box-shadow:0 0 14px 3px rgba(232,121,249,0.75)}}
+.central-urgente{animation:glowpulse 1.4s ease-in-out infinite;}
 
 /* ═══ SLOT ITEMS ═══ */
 .slot{padding:10px 12px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;animation:fadeUp 0.25s ease both;cursor:default;}
@@ -615,6 +617,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div class="ch" style="border-color:#3a1a4a;">
       <div class="ci" style="background:#150a20;">🧭</div>
       <div><div class="ct" style="color:#c084fc;">Central de Preparação</div><div class="cs">Tudo o que precisas de saber já, num só sítio</div></div>
+      <button id="btn-central-foco" onclick="toggleCentralFoco()" style="font-size:0.4rem;padding:5px 9px;border-radius:14px;background:#0a0a14;border:1px solid var(--border);color:var(--dim2);cursor:pointer;white-space:nowrap;">🎯 Só o essencial</button>
     </div>
     <div id="central-preparacao" style="padding:10px;"></div>
   </div>
@@ -8119,22 +8122,91 @@ function setTurno(t){
 // ══════════════════════════════════════════════
 //  CENTRAL DE PREPARACAO
 // ══════════════════════════════════════════════
+function toggleCentralFoco(){
+  const atual = localStorage.getItem('pro_central_foco')==='1';
+  localStorage.setItem('pro_central_foco', atual?'0':'1');
+  const btn = document.getElementById('btn-central-foco');
+  if(btn){
+    const novo = !atual;
+    btn.style.background = novo ? 'var(--gold)22' : '#0a0a14';
+    btn.style.borderColor = novo ? 'var(--gold)' : 'var(--border)';
+    btn.style.color = novo ? 'var(--gold)' : 'var(--dim2)';
+    btn.textContent = novo ? '📖 Ver tudo' : '🎯 Só o essencial';
+  }
+  safeRun(renderCentralPreparacao,'renderCentralPreparacao-toggle');
+}
+
+function _calcularQuebrasHoje(){
+  const grupos = calcularMinutosVizinhos();
+  if(!grupos) return [];
+  return grupos.filter(function(g){ return !g.bateuHoje && g.streak>=3; }).map(function(g){
+    return Object.assign({}, g, { rangeStr: ':'+pad(g.membros[0])+'-:'+pad(g.membros[g.membros.length-1]) });
+  });
+}
+
 function renderCentralPreparacao(){
   const el = document.getElementById('central-preparacao');
   if(!el) return;
 
+  const focoAtivo = localStorage.getItem('pro_central_foco')==='1';
+  const btnFoco = document.getElementById('btn-central-foco');
+  if(btnFoco){
+    btnFoco.style.background = focoAtivo ? 'var(--gold)22' : '#0a0a14';
+    btnFoco.style.borderColor = focoAtivo ? 'var(--gold)' : 'var(--border)';
+    btnFoco.style.color = focoAtivo ? 'var(--gold)' : 'var(--dim2)';
+    btnFoco.textContent = focoAtivo ? '📖 Ver tudo' : '🎯 Só o essencial';
+  }
+  const agora = new Date();
+  const minAgora = agora.getMinutes();
+  const horaAgora = agora.getHours();
+
+  const grupos = calcularMinutosVizinhos();
+  const quebras = _calcularQuebrasHoje();
+
+  // Item mais urgente entre os Minutos Vizinhos (para o brilho e para o modo foco)
+  let itemUrgente = null;
+  if(grupos && grupos.length){
+    const g0 = grupos[0];
+    const diff0 = g0.membros[0]-minAgora;
+    if(!g0.bateuHoje && diff0>=1 && diff0<=5){ itemUrgente = { tipo:'janela', diff:diff0, grupo:g0 }; }
+  }
+
+  // ═══ MODO FOCO: só o essencial ═══
+  if(focoAtivo){
+    let htmlFoco = '';
+    if(itemUrgente){
+      const rangeStr = ':'+pad(itemUrgente.grupo.membros[0])+'-:'+pad(itemUrgente.grupo.membros[itemUrgente.grupo.membros.length-1]);
+      htmlFoco += '<div class="central-urgente" style="background:#1a0a1a;border:1.5px solid #e879f9;border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;">'
+        +'<div style="font-size:0.44rem;color:var(--dim2);">🧩 JANELA A CHEGAR</div>'
+        +'<div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:#e879f9;">'+rangeStr+'</div>'
+        +'<div style="font-size:0.48rem;color:#fbbf24;">⏳ daqui a '+itemUrgente.diff+'min</div>'
+        +'</div>';
+    }
+    if(quebras.length){
+      htmlFoco += quebras.map(function(q){
+        const label = horaAgora>=22 ? 'quebrou hoje' : 'em risco de quebrar hoje';
+        return '<div style="background:#1a0a0a;border:1px solid #ef4444;border-radius:8px;padding:7px 9px;margin-bottom:6px;">'
+          +'<span style="font-size:0.46rem;color:#ef4444;">💔 '+q.rangeStr+' — sequência de '+q.streak+'d '+label+'</span>'
+          +'</div>';
+      }).join('');
+    }
+    if(!itemUrgente && !quebras.length){
+      htmlFoco = '<div style="text-align:center;padding:14px 0;font-size:0.48rem;color:var(--dim2);">😌 Nada urgente agora — podes relaxar.</div>';
+    }
+    el.innerHTML = htmlFoco;
+    return;
+  }
+
+  // ═══ MODO COMPLETO ═══
   let html = '';
 
   // 1. Minutos Vizinhos - destaque principal
-  const grupos = calcularMinutosVizinhos();
   html += '<div style="font-size:0.44rem;color:#e879f9;font-weight:700;letter-spacing:0.06em;margin-bottom:5px;">🧩 MINUTOS (o que mais importa agora)</div>';
   if(grupos===null){
     html += '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:8px;">Ainda com poucos dados de quadras.</div>';
   } else if(!grupos.length){
     html += '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:8px;">Ainda sem grupos de minutos vizinhos.</div>';
   } else {
-    const agora = new Date();
-    const minAgora = agora.getMinutes();
     const grupo = grupos[0];
     const rangeStr = grupo.membros.length>1 ? ':'+pad(grupo.membros[0])+'-:'+pad(grupo.membros[grupo.membros.length-1]) : ':'+pad(grupo.membros[0]);
     const diff = grupo.membros[0]-minAgora;
@@ -8142,7 +8214,8 @@ function renderCentralPreparacao(){
     if(grupo.bateuHoje){ statusMin = '<span style="color:var(--green);">✅ já bateu hoje</span>'; }
     else if(diff>=1 && diff<=5){ statusMin = '<span style="color:#fbbf24;">⏳ entra daqui a '+diff+'min — fica atenta!</span>'; }
     else { statusMin = '<span style="color:var(--dim2);">ainda não chegou a esta hora</span>'; }
-    html += '<div style="background:#0a0a14;border-radius:8px;padding:8px 10px;margin-bottom:8px;">'
+    const urgenteClass = itemUrgente ? ' central-urgente' : '';
+    html += '<div class="'+urgenteClass.trim()+'" style="background:#0a0a14;border-radius:8px;padding:8px 10px;margin-bottom:8px;">'
       +'<div style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:#e879f9;">'+rangeStr+'</div>'
       +'<div style="font-size:0.44rem;margin-top:2px;">'+statusMin+'</div>'
       +'</div>';
@@ -8168,6 +8241,26 @@ function renderCentralPreparacao(){
     }
   }
 
+  // 1b. Grupos em Formação (top pick) + Quebras de hoje
+  const emFormacao = calcularGruposEmFormacao();
+  if((emFormacao && emFormacao.length) || quebras.length){
+    html += '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">';
+    if(emFormacao && emFormacao.length){
+      const f0 = emFormacao[0];
+      const rangeStrF = ':'+pad(f0.membros[0])+'-:'+pad(f0.membros[f0.membros.length-1]);
+      html += '<div style="background:#0a0a14;border:1px dashed #4a5a1a;border-radius:8px;padding:6px 9px;">'
+        +'<span style="font-size:0.42rem;color:#a3e635;">🌱 Em formação: <b>'+rangeStrF+'</b> ('+f0.total+'x nos últimos 14 dias)</span>'
+        +'</div>';
+    }
+    quebras.forEach(function(q){
+      const label = horaAgora>=22 ? 'quebrou hoje' : 'em risco de quebrar hoje';
+      html += '<div style="background:#1a0a0a;border:1px solid #ef444455;border-radius:8px;padding:6px 9px;">'
+        +'<span style="font-size:0.42rem;color:#ef4444;">💔 '+q.rangeStr+' — sequência de '+q.streak+'d '+label+'</span>'
+        +'</div>';
+    });
+    html += '</div>';
+  }
+
   // 2. Proxima Hora Forte (Quadras + Triplos)
   html += '<div style="font-size:0.44rem;color:var(--orange);font-weight:700;letter-spacing:0.06em;margin-bottom:5px;">🔥 PRÓXIMA HORA FORTE</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">';
@@ -8184,23 +8277,59 @@ function renderCentralPreparacao(){
   html += '<div id="central-prep-triplo" style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;font-size:0.4rem;color:var(--dim2);">…</div>';
   html += '</div>';
 
-  // 3. Confianca do Dia (resumido)
+  // 3. Confianca do Dia (resumido) + cor de borda dinamica conforme o Termometro
+  let termFav = null;
   if(typeof calcularTermometro==='function'){
     const term = calcularTermometro();
     const pm = typeof calcularPadraoMes==='function' ? calcularPadraoMes() : null;
     let nFav=0, nTot=0;
     if(term){
       const fasesFav=['subida','perto_topo'];
-      nTot++; if((term.quadras.fase&&fasesFav.indexOf(term.quadras.fase)>=0)||(term.triplos.fase&&fasesFav.indexOf(term.triplos.fase)>=0)) nFav++;
+      termFav = (term.quadras.fase&&fasesFav.indexOf(term.quadras.fase)>=0)||(term.triplos.fase&&fasesFav.indexOf(term.triplos.fase)>=0);
+      nTot++; if(termFav) nFav++;
     }
     if(pm){ nTot++; if(pm.favoravel) nFav++; }
     if(nTot>0){
       const emoji = nFav===nTot ? '🟢' : (nFav===0 ? '🔴' : '🟡');
-      html += '<div style="font-size:0.44rem;color:var(--dim2);">'+emoji+' '+nFav+' de '+nTot+' sinais gerais a favor hoje — ver Confiança do Dia abaixo para detalhe.</div>';
+      html += '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:8px;">'+emoji+' '+nFav+' de '+nTot+' sinais gerais a favor hoje — ver Confiança do Dia abaixo para detalhe.</div>';
     }
   }
+  // Aplica cor de fundo dinamica ao card conforme o Termometro (feito no fim, via CSS var no wrapper)
+  const cardEl = document.getElementById('card-central-preparacao');
+  if(cardEl){
+    cardEl.style.borderColor = termFav===true ? '#4ade8088' : (termFav===false ? '#ef444488' : '#3a1a4a');
+  }
 
-  // 4. Estado dos alertas
+  // 4. Comparacao em Tempo Real: hoje vs ontem, ate esta hora
+  const dupT = new Set(_encontrarDuplicados(S.triplos)), dupQ = new Set(_encontrarDuplicados(S.quadras));
+  const tU = S.triplos.filter(function(_,i){return !dupT.has(i);}).filter(function(e){return e.ts&&e.hora;});
+  const qU = S.quadras.filter(function(_,i){return !dupQ.has(i);}).filter(function(e){return e.ts&&e.hora;});
+  const hojeKey = _diaKey(Date.now());
+  const ontemD = new Date(agora.getTime()-86400000);
+  const ontemKey = _diaKey(ontemD.getTime());
+  const minsAgoraTotal = horaAgora*60+minAgora;
+  function contarAte(arr, diaKey, minsMax){
+    return arr.filter(function(e){
+      if(_diaKey(e.ts)!==diaKey) return false;
+      const hm = toMin(e.hora);
+      return hm<=minsMax;
+    }).length;
+  }
+  const tHojeAte = contarAte(tU, hojeKey, minsAgoraTotal), qHojeAte = contarAte(qU, hojeKey, minsAgoraTotal);
+  const tOntemAte = contarAte(tU, ontemKey, minsAgoraTotal), qOntemAte = contarAte(qU, ontemKey, minsAgoraTotal);
+  html += '<div style="font-size:0.44rem;color:#60a5fa;font-weight:700;letter-spacing:0.06em;margin-bottom:5px;margin-top:4px;">⚖️ HOJE vs ONTEM (até agora)</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.4rem;color:var(--dim2);">🟢 Triplos</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.8rem;font-weight:700;color:'+(tHojeAte>=tOntemAte?'var(--green)':'#ef4444')+';">'+tHojeAte+' <span style="font-size:0.4rem;color:var(--dim2);">vs '+tOntemAte+'</span></div>'
+    +'</div>'
+    +'<div style="background:#0a0a14;border-radius:8px;padding:7px;text-align:center;">'
+    +'<div style="font-size:0.4rem;color:var(--dim2);">🟡 Quadras</div>'
+    +'<div style="font-family:var(--font-mono);font-size:0.8rem;font-weight:700;color:'+(qHojeAte>=qOntemAte?'var(--green)':'#ef4444')+';">'+qHojeAte+' <span style="font-size:0.4rem;color:var(--dim2);">vs '+qOntemAte+'</span></div>'
+    +'</div>'
+    +'</div>';
+
+  // 5. Estado dos alertas
   const vozAtiva = localStorage.getItem('pro_voz_alertas')!=='off';
   const notifOk = typeof Notification!=='undefined' && Notification.permission==='granted';
   html += '<div style="display:flex;gap:10px;margin-top:8px;font-size:0.4rem;color:var(--dim2);">'
@@ -8218,7 +8347,6 @@ function renderCentralPreparacao(){
     const freq={}, diasPorHora={};
     for(let h=0;h<24;h++){ freq[h]=0; diasPorHora[h]=new Set(); }
     unicos.forEach(function(e){ const h=parseInt(e.hora.split(':')[0]); freq[h]++; diasPorHora[h].add(_diaKey(e.ts)); });
-    const hojeKey = _diaKey(Date.now());
     const jaSaiuHoje={}; unicos.forEach(function(e){ if(_diaKey(e.ts)===hojeKey) jaSaiuHoje[parseInt(e.hora.split(':')[0])]=true; });
     const ranking=[];
     for(let h=0;h<24;h++){ const dias=diasPorHora[h].size; if(dias<5) continue; ranking.push({h:h, taxa:freq[h]/dias, jaSaiu: !!jaSaiuHoje[h]}); }
