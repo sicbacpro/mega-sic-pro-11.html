@@ -15762,6 +15762,47 @@ function toggleNotificacaoPersistente(){
   if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
 }
 
+// ══════════════════════════════════════════════
+//  NOTIFICAÇÃO: HORA FORTE E ESTÁVEL (11h/17h-like)
+// ══════════════════════════════════════════════
+// Avisa 10min antes de entrar numa hora que é, ao mesmo tempo, acima da média
+// E estável semana a semana (usa _estabilidadeHora — não tem horas fixas no
+// código, identifica sozinha quais qualificam com os dados atuais).
+function checkHoraForteEstavel(){
+  if(localStorage.getItem('pro_notif_hora_estavel')!=='1') return;
+  if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
+  const agora = new Date();
+  const minAgora = agora.getMinutes();
+  if(minAgora < 50) return; // só dispara nos ultimos 10min da hora atual
+  const minutosRestantes = 60-minAgora;
+  const proximaHora = (agora.getHours()+1)%24;
+  const estab = _estabilidadeHora(S.triplos, proximaHora);
+  if(!estab || estab.cv>0.8 || estab.media<(100/24)) return;
+  const hojeKey = _diaKey(Date.now());
+  const chave = 'pro_notif_hora_estavel_'+hojeKey+'_'+proximaHora;
+  if(localStorage.getItem(chave)==='1') return;
+  localStorage.setItem(chave,'1');
+  const corpo = 'Daqui a '+minutosRestantes+'min entra a '+pad(proximaHora)+'h — hora forte e estável ('+estab.nSemanas+' semanas, méd. '+estab.media.toFixed(1)+'%).';
+  try{
+    new Notification('🏆 Mega Sic Bac PRO', { body: corpo, tag:'mega-sicbac-hora-estavel-'+proximaHora, renotify:true });
+  }catch(e){}
+  if(typeof falarAlerta==='function') falarAlerta('Atenção. Daqui a '+minutosRestantes+' minutos entra a '+proximaHora+' horas, uma hora historicamente forte e estável.');
+}
+function toggleNotifHoraEstavel(){
+  const atual = localStorage.getItem('pro_notif_hora_estavel')==='1';
+  if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
+    if(typeof Notification!=='undefined'){
+      Notification.requestPermission().then(function(p){
+        if(p==='granted'){ localStorage.setItem('pro_notif_hora_estavel','1'); }
+        if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+      });
+    }
+    return;
+  }
+  localStorage.setItem('pro_notif_hora_estavel', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
+
 function exportarMapaMinutos(){
   const ev = minGetTodosEventos(minFiltroTipo, minFiltroDia, minFiltroPeriodo);
   if(ev.length<5){ showToast('Sem dados suficientes (com este filtro) para exportar.','warn'); return; }
@@ -18859,6 +18900,16 @@ function renderAlarmeQuadrasConfig(){
     +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Mostra sempre "Próxima janela: HH:MM" na tua barra de notificações, atualizada sozinha (silenciosa, sem tocar de cada vez). Precisa de autorizares notificações.</div>'
     +'</div>';
 
+  // Bloco 0d: Notificacao de hora forte e estavel
+  const notifHoraEstavelAtivo = localStorage.getItem('pro_notif_hora_estavel')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🏆 Hora Forte e Estável</span>'
+    +toggleBtn(notifHoraEstavelAtivo,'toggleNotifHoraEstavel()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Avisa 10min antes de entrar numa hora que é, ao mesmo tempo, acima da média E consistente semana a semana (não são horas fixas — a app recalcula sozinha com os teus dados mais recentes). Precisa de autorizares notificações.</div>'
+    +'</div>';
+
   // Bloco 1: Tempo sem sair
   html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
@@ -19657,6 +19708,7 @@ function verificacoesLeves(){
   safeRun(checkRelatorioSemanalAuto,'checkRelatorioSemanalAuto');
   safeRun(atualizarNotificacaoPersistente,'atualizarNotificacaoPersistente');
   safeRun(checkQuebraSequencia,'checkQuebraSequencia');
+  safeRun(checkHoraForteEstavel,'checkHoraForteEstavel');
 }
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
