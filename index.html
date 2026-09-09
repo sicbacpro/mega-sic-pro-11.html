@@ -3590,10 +3590,18 @@ function filtrarDuplicadosImport(lote, historicoExistente, chaveFn, janelaHistor
 // média dessa % e o coeficiente de variação (CV = desvio/média — quanto menor, mais
 // estável). Só usa `ts` de registos NÃO importados, porque só esses têm timestamp
 // fiável (import antigo gravava a hora de importação, não a do evento).
+// Janela de recência: descobrimos que a "hora quente" vai à deriva ao longo dos
+// meses (junho girou à volta das 09h, julho/agosto à volta das 22h-23h, agora
+// setembro anda pelas 13h-17h) — não é um valor fixo que se mantém para sempre.
+// Por isso só se olha para as últimas N semanas em vez do histórico completo,
+// para o sinal refletir o regime atual, não uma média diluída com meses antigos
+// que já não representam o teu horário/o jogo agora.
+const JANELA_ESTABILIDADE_SEMANAS = 8;
 function _estabilidadeHora(arr, hora){
+  const limiteTs = Date.now() - JANELA_ESTABILIDADE_SEMANAS*7*24*60*60*1000;
   const porSemana = {};
   arr.forEach(function(e){
-    if(!e.ts || !e.hora || e.imported) return;
+    if(!e.ts || !e.hora || e.imported || e.ts<limiteTs) return;
     const d = new Date(e.ts);
     const diaSemana = (d.getDay()+6)%7; // 0=segunda
     const seg = new Date(d.getFullYear(), d.getMonth(), d.getDate()-diaSemana);
