@@ -3597,6 +3597,24 @@ function filtrarDuplicadosImport(lote, historicoExistente, chaveFn, janelaHistor
 // para o sinal refletir o regime atual, não uma média diluída com meses antigos
 // que já não representam o teu horário/o jogo agora.
 const JANELA_ESTABILIDADE_SEMANAS = 8;
+// Média de quantos registos costumam sair, por DIA, numa hora específica —
+// usa a mesma janela de 8 semanas do _estabilidadeHora, mas em contagem absoluta
+// por dia (não % semanal), para dar para comparar diretamente com "quantos saíram
+// hoje" e detetar quando uma hora historicamente forte falha no próprio dia.
+function _mediaDiariaHora(arr, hora){
+  const limiteTs = Date.now() - JANELA_ESTABILIDADE_SEMANAS*7*24*60*60*1000;
+  const porDia = {};
+  arr.forEach(function(e){
+    if(!e.ts || !e.hora || e.imported || e.ts<limiteTs) return;
+    if(parseInt(e.hora.split(':')[0])!==hora) return;
+    const d = new Date(e.ts);
+    const key = d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
+    porDia[key] = (porDia[key]||0)+1;
+  });
+  const vals = Object.keys(porDia).map(function(k){ return porDia[k]; });
+  if(vals.length<4) return null;
+  return vals.reduce(function(a,b){return a+b;},0)/vals.length;
+}
 function _estabilidadeHora(arr, hora){
   const limiteTs = Date.now() - JANELA_ESTABILIDADE_SEMANAS*7*24*60*60*1000;
   const porSemana = {};
@@ -15811,6 +15829,41 @@ function toggleNotifHoraEstavel(){
   if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
 }
 
+// ══════════════════════════════════════════════
+//  ALERTA: QUEBRA DE HORA FORTE E ESTÁVEL
+// ══════════════════════════════════════════════
+// Corre ao fim do dia (depois da hora já ter passado há muito) e avisa se uma
+// hora que é historicamente forte+estável ficou muito abaixo do normal hoje —
+// é o "quebra de sequência" mas para horas em vez de minutos vizinhos.
+function checkQuebraHoraForte(){
+  if(localStorage.getItem('pro_notif_hora_estavel')!=='1') return;
+  if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
+  const agora = new Date();
+  if(agora.getHours()<22) return; // só verifica depois da hora já ter passado ha muito
+  const hojeKey = _diaKey(Date.now());
+  const hojeInicio = new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),0,0,0).getTime();
+
+  for(let h=0;h<22;h++){
+    const estab = _estabilidadeHora(S.triplos, h);
+    if(!estab || estab.cv>0.8 || estab.media<(100/24)) continue;
+    const mediaDia = _mediaDiariaHora(S.triplos, h);
+    if(!mediaDia || mediaDia<3) continue; // baseline pequena demais para ser fiavel
+    const contagemHoje = S.triplos.filter(function(t){
+      return t.ts>=hojeInicio && t.hora && parseInt(t.hora.split(':')[0])===h;
+    }).length;
+    if(contagemHoje >= mediaDia*0.3) continue; // dentro do normal
+
+    const chave = 'pro_notif_quebra_hora_'+hojeKey+'_'+h;
+    if(localStorage.getItem(chave)==='1') continue;
+    localStorage.setItem(chave,'1');
+    const corpo = pad(h)+'h teve só '+contagemHoje+' hoje (normal: ~'+mediaDia.toFixed(0)+') — pode ser sinal de mudança no padrão.';
+    try{
+      new Notification('\ud83d\udcc9 Mega Sic Bac PRO', { body: corpo, tag:'mega-sicbac-quebra-hora-'+h, renotify:true });
+    }catch(e){}
+    if(typeof falarAlerta==='function') falarAlerta('Atenção. A hora '+h+' ficou bem abaixo do normal hoje. Pode ser mudança de padrão.');
+  }
+}
+
 function exportarMapaMinutos(){
   const ev = minGetTodosEventos(minFiltroTipo, minFiltroDia, minFiltroPeriodo);
   if(ev.length<5){ showToast('Sem dados suficientes (com este filtro) para exportar.','warn'); return; }
@@ -18915,7 +18968,7 @@ function renderAlarmeQuadrasConfig(){
     +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🏆 Hora Forte e Estável</span>'
     +toggleBtn(notifHoraEstavelAtivo,'toggleNotifHoraEstavel()','✅ Ativo','⭘ Desativado')
     +'</div>'
-    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Avisa 10min antes de entrar numa hora que é, ao mesmo tempo, acima da média E consistente semana a semana (não são horas fixas — a app recalcula sozinha com os teus dados mais recentes). Precisa de autorizares notificações.</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Avisa 10min antes de entrar numa hora que é, ao mesmo tempo, acima da média E consistente semana a semana (não são horas fixas — a app recalcula sozinha com os teus dados mais recentes, últimas 8 semanas). Também avisa ao fim do dia se uma dessas horas ficou muito abaixo do normal hoje (possível quebra de padrão). Precisa de autorizares notificações.</div>'
     +'</div>';
 
   // Bloco 1: Tempo sem sair
@@ -19368,9 +19421,20 @@ function _sniperInstrucaoPara(tipo, scoreObj, arr, agora, agoraMin, ivMax){
   // QUADRA: p90=391min (6.5h), p95=556min (9.3h), p99=791min (13.2h) → secas de
   // várias horas são NORMAIS neste tipo, por isso o teto tem de ser muito mais alto.
   const LIMITE_SECA_REAL_MIN = tipo==='quadra' ? 720 : 50; // quadra: 12h · triplo: 50min
-  if(tempoPassado!==null && tempoPassado>LIMITE_SECA_REAL_MIN && urgencia<3){
+  // Se a pessoa já confirmou manualmente que ESTA seca em particular é real (não
+  // atraso de registo), ignora-se o teto para esta ocorrência — a confirmação fica
+  // ligada ao ts do último registo, por isso deixa de valer assim que sair um novo
+  // triplo/quadra (nova seca = nova decisão).
+  const confKey = 'pro_seca_confirmada_'+tipo;
+  let confirmada = false;
+  try{
+    const conf = JSON.parse(localStorage.getItem(confKey)||'null');
+    if(conf && arr[0] && conf.ultimoTs===arr[0].ts) confirmada = true;
+  }catch(e){}
+  let mostrarBotaoConfirmar = false;
+  if(tempoPassado!==null && tempoPassado>LIMITE_SECA_REAL_MIN && urgencia<3 && !confirmada){
     instrucao = '\u26a0\ufe0f '+tempoPassado+'min sem registar '+nomeMaiusc+' \u2014 acima do teto de seca real ('+LIMITE_SECA_REAL_MIN+'min). Prov\xe1vel atraso de registo, n\xe3o seca gen\xedna. Confirma se j\xe1 sa\xedram resultados por lan\xe7ar.';
-    cor = '#94a3b8'; urgencia = 1; secaAtrasoProvavel = true;
+    cor = '#94a3b8'; urgencia = 1; secaAtrasoProvavel = true; mostrarBotaoConfirmar = true;
   } else if(tempoPassado!==null && avgIv!==null && avgIv>0 && urgencia<3){
     const ratio = tempoPassado/avgIv;
     if(ratio>=1.8){
@@ -19412,7 +19476,15 @@ function _sniperInstrucaoPara(tipo, scoreObj, arr, agora, agoraMin, ivMax){
     cor = '#fde047'; urgencia = 4;
   }
 
-  return {instrucao, cor, urgencia, janelaDeOuro, secaAtrasoProvavel};
+  return {instrucao, cor, urgencia, janelaDeOuro, secaAtrasoProvavel, mostrarBotaoConfirmar, tipo};
+}
+
+function confirmarSecaReal(tipo){
+  const arr = tipo==='quadra' ? S.quadras : S.triplos;
+  if(!arr || !arr[0]){ showToast('Sem dados suficientes para confirmar.','warn'); return; }
+  localStorage.setItem('pro_seca_confirmada_'+tipo, JSON.stringify({ultimoTs: arr[0].ts, confirmadoEm: Date.now()}));
+  showToast('\u2705 Confirmado: esta seca conta como real, n\xe3o atraso.','green');
+  if(typeof renderSniperInstrucao==='function') renderSniperInstrucao();
 }
 
 function renderSniperInstrucao(){
@@ -19451,10 +19523,14 @@ function renderSniperInstrucao(){
   function cardHtml(r){
     const ouro = r.urgencia>=4;
     const fundo = ouro ? 'linear-gradient(135deg,'+r.cor+'22,'+r.cor+'08)' : r.cor+'11';
+    const botaoConfirmar = r.mostrarBotaoConfirmar
+      ? '<button onclick="confirmarSecaReal(\''+r.tipo+'\')" style="margin-top:8px;width:100%;padding:7px;border-radius:8px;background:#0a1410;border:1px solid var(--green);color:var(--green);font-size:0.44rem;font-weight:700;cursor:pointer;">\u2705 Confirmar: sem atraso, seca real</button>'
+      : '';
     return '<div style="flex:1;background:'+fundo+';border:2px solid '+r.cor+(r.urgencia>=2?';box-shadow:0 0 '+(ouro?'22px':'16px')+' '+r.cor+(ouro?'77':'44'):'')+';border-radius:14px;padding:12px;text-align:center;">'
       +'<div style="font-size:'+(r.urgencia>=2?'0.62':'0.56')+'rem;font-weight:700;color:'+r.cor+';line-height:1.5;">'+r.instrucao+'</div>'
       +(ouro?'<div style="margin-top:6px;font-size:0.6rem;color:'+r.cor+';animation:pulse 0.8s infinite;">\u2728 \u2728 \u2728</div>'
         :r.urgencia>=3?'<div style="margin-top:6px;font-size:0.5rem;color:'+r.cor+';animation:pulse 1s infinite;">\u25cf \u25cf \u25cf</div>':'')
+      +botaoConfirmar
       +'</div>';
   }
 
@@ -19717,6 +19793,7 @@ function verificacoesLeves(){
   safeRun(atualizarNotificacaoPersistente,'atualizarNotificacaoPersistente');
   safeRun(checkQuebraSequencia,'checkQuebraSequencia');
   safeRun(checkHoraForteEstavel,'checkHoraForteEstavel');
+  safeRun(checkQuebraHoraForte,'checkQuebraHoraForte');
 }
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
