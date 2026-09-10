@@ -791,6 +791,15 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="dash-minutos-quentes" style="padding:4px 0;"></div>
   </div>
 
+  <!-- BOLETIM DO DIA -->
+  <div class="card" id="sec-boletim-dia" style="margin-bottom:10px;display:none;">
+    <div class="ch">
+      <div class="ci" style="background:#0a1410;">📋</div>
+      <div><div class="ct">Boletim do Dia</div><div class="cs">Resumo de ontem — sniper, horas fortes e repetição</div></div>
+    </div>
+    <div id="dash-boletim-conteudo" style="padding:10px;"></div>
+  </div>
+
   <!-- GRÁFICO DE LINHA ANIMADO — TRIPLOS HOJE -->
   <div class="card" style="margin-bottom:10px;">
     <div class="ch">
@@ -8853,6 +8862,7 @@ function renderDashboard(){
   safeRun(renderConfiancaDia,'renderConfiancaDia');
   safeRun(renderProximaHoraForte,'renderProximaHoraForte');
   safeRun(renderProximaHoraForteTriplo,'renderProximaHoraForteTriplo');
+  safeRun(renderBoletimDia,'renderBoletimDia');
   safeRun(applyModoEssencial,'applyModoEssencial');
   safeRun(syncTurnoPills,'syncTurnoPills');
 
@@ -15814,6 +15824,107 @@ function checkHoraForteEstavel(){
   }catch(e){}
   if(typeof falarAlerta==='function') falarAlerta('Atenção. Daqui a '+minutosRestantes+' minutos entra a '+proximaHora+' horas, uma hora historicamente forte e estável.');
 }
+// ══════════════════════════════════════════════
+//  BOLETIM DO DIA — resumo diário juntando sniper, horas fortes e repetição
+// ══════════════════════════════════════════════
+function calcularBoletimDia(offsetDias){
+  const agora = new Date();
+  const diaRef = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()-offsetDias);
+  const inicio = diaRef.getTime();
+  const fim = inicio + 24*60*60*1000;
+
+  const callsDia = (sniperCalls||[]).filter(function(c){ return c.ts>=inicio && c.ts<fim && c.resolved && (c.resultado==='acerto'||c.resultado==='erro'); });
+  const acertosDia = callsDia.filter(function(c){ return c.resultado==='acerto'; }).length;
+  const sniperPct = callsDia.length ? Math.round(100*acertosDia/callsDia.length) : null;
+
+  const horasOk = [], horasQuebra = [];
+  for(let h=0;h<24;h++){
+    const estab = _estabilidadeHora(S.triplos, h);
+    if(!estab || estab.cv>0.8 || estab.media<(100/24)) continue;
+    const mediaDia = _mediaDiariaHora(S.triplos, h);
+    if(!mediaDia || mediaDia<3) continue;
+    const contagem = S.triplos.filter(function(t){ return t.ts>=inicio && t.ts<fim && t.hora && parseInt(t.hora.split(':')[0])===h; }).length;
+    if(contagem >= mediaDia*0.7) horasOk.push({h:h,contagem:contagem,mediaDia:mediaDia});
+    else horasQuebra.push({h:h,contagem:contagem,mediaDia:mediaDia});
+  }
+
+  const triplosDia = S.triplos.filter(function(t){ return t.ts>=inicio && t.ts<fim && t.num; }).sort(function(a,b){ return a.ts-b.ts; });
+  let repeticoes = 0;
+  for(let i=1;i<triplosDia.length;i++){ if(triplosDia[i].num===triplosDia[i-1].num) repeticoes++; }
+  const repPct = triplosDia.length>1 ? Math.round(100*repeticoes/(triplosDia.length-1)) : null;
+
+  let pontos=0, maxPontos=0;
+  if(sniperPct!==null){ maxPontos+=40; pontos += sniperPct>=15?40:sniperPct>=8?25:10; }
+  if(horasOk.length+horasQuebra.length>0){ maxPontos+=40; pontos += Math.round(40*horasOk.length/(horasOk.length+horasQuebra.length)); }
+  if(repPct!==null){ maxPontos+=20; pontos += repPct>=17?20:repPct>=15?12:6; }
+  const notaPct = maxPontos>0 ? Math.round(100*pontos/maxPontos) : null;
+  const nota = notaPct===null?'—':notaPct>=85?'A':notaPct>=70?'B+':notaPct>=55?'B':notaPct>=40?'C':'D';
+
+  return {diaRef:diaRef.getTime(), sniperPct:sniperPct, callsDia:callsDia.length, acertosDia:acertosDia,
+    horasOk:horasOk, horasQuebra:horasQuebra, repPct:repPct, nota:nota, notaPct:notaPct, triplosDia:triplosDia.length};
+}
+
+function checkBoletimDiario(){
+  if(localStorage.getItem('pro_notif_boletim')!=='1') return;
+  const agora = new Date();
+  if(agora.getHours()!==0 || agora.getMinutes()>10) return; // so na 1a janela apos meia-noite
+  const hojeKey = _diaKey(Date.now());
+  const chave = 'pro_boletim_gerado_'+hojeKey;
+  if(localStorage.getItem(chave)==='1') return;
+  localStorage.setItem(chave,'1');
+  const b = calcularBoletimDia(1);
+  localStorage.setItem('pro_boletim_ultimo', JSON.stringify(b));
+  if(typeof Notification!=='undefined' && Notification.permission==='granted'){
+    let corpo = '';
+    if(b.sniperPct!==null) corpo += '\ud83c\udfaf Sniper: '+b.acertosDia+'/'+b.callsDia+' ('+b.sniperPct+'%). ';
+    corpo += '\ud83c\udfc6 '+b.horasOk.length+' hora(s) forte(s) normais, '+b.horasQuebra.length+' quebrada(s). ';
+    if(b.repPct!==null) corpo += '\ud83d\udd01 Repeti\xe7\xe3o: '+b.repPct+'%. ';
+    corpo += 'Nota: '+b.nota;
+    try{ new Notification('\ud83d\udccb Boletim de Ontem', { body: corpo, tag:'mega-sicbac-boletim' }); }catch(e){}
+  }
+  if(typeof renderBoletimDia==='function') renderBoletimDia();
+}
+
+function renderBoletimDia(){
+  const sec = document.getElementById('sec-boletim-dia');
+  const el = document.getElementById('dash-boletim-conteudo');
+  if(!sec || !el) return;
+  let b = null;
+  try{ b = JSON.parse(localStorage.getItem('pro_boletim_ultimo')||'null'); }catch(e){}
+  if(!b) b = calcularBoletimDia(1);
+  if(!b || (b.callsDia===0 && b.triplosDia===0)){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  const dataTxt = new Date(b.diaRef).toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
+  const corNota = b.notaPct===null?'var(--dim2)':b.notaPct>=70?'var(--green)':b.notaPct>=40?'#fbbf24':'#ef4444';
+  let html = '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
+    +'<div style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:2px solid '+corNota+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:'+corNota+';">'+b.nota+'</div>'
+    +'<div><div style="font-size:0.5rem;color:var(--text);font-weight:700;">'+dataTxt+'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosDia+' triplos registados</div></div>'
+    +'</div>';
+  html += '<div style="font-size:0.46rem;color:var(--text);line-height:1.9;">';
+  if(b.sniperPct!==null) html += '\ud83c\udfaf Sniper: '+b.acertosDia+'/'+b.callsDia+' ('+b.sniperPct+'%)<br>';
+  html += '\ud83c\udfc6 Horas fortes: '+b.horasOk.length+' normais';
+  if(b.horasQuebra.length) html += ', <span style="color:#ef4444;">'+b.horasQuebra.length+' quebrada(s) ('+b.horasQuebra.map(function(x){return pad(x.h)+'h';}).join(', ')+')</span>';
+  html += '<br>';
+  if(b.repPct!==null) html += '\ud83d\udd01 Repeti\xe7\xe3o de n\xfamero: '+b.repPct+'% (normal: ~17%)<br>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleNotifBoletim(){
+  const atual = localStorage.getItem('pro_notif_boletim')==='1';
+  if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
+    if(typeof Notification!=='undefined'){
+      Notification.requestPermission().then(function(p){
+        if(p==='granted'){ localStorage.setItem('pro_notif_boletim','1'); }
+        if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+      });
+    }
+    return;
+  }
+  localStorage.setItem('pro_notif_boletim', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
 function toggleNotifHoraEstavel(){
   const atual = localStorage.getItem('pro_notif_hora_estavel')==='1';
   if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
@@ -18971,6 +19082,16 @@ function renderAlarmeQuadrasConfig(){
     +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Avisa 10min antes de entrar numa hora que é, ao mesmo tempo, acima da média E consistente semana a semana (não são horas fixas — a app recalcula sozinha com os teus dados mais recentes, últimas 8 semanas). Também avisa ao fim do dia se uma dessas horas ficou muito abaixo do normal hoje (possível quebra de padrão). Precisa de autorizares notificações.</div>'
     +'</div>';
 
+  // Bloco 0e: Boletim do Dia
+  const notifBoletimAtivo = localStorage.getItem('pro_notif_boletim')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">📋 Boletim do Dia</span>'
+    +toggleBtn(notifBoletimAtivo,'toggleNotifBoletim()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Logo depois da meia-noite, envia um resumo do dia que passou: precisão do Sniper, quantas horas fortes se comportaram como esperado, e a taxa de repetição de número — tudo junto numa "nota" do dia. Também fica visível como card no topo do Dashboard. Precisa de autorizares notificações.</div>'
+    +'</div>';
+
   // Bloco 1: Tempo sem sair
   html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
@@ -19794,6 +19915,7 @@ function verificacoesLeves(){
   safeRun(checkQuebraSequencia,'checkQuebraSequencia');
   safeRun(checkHoraForteEstavel,'checkHoraForteEstavel');
   safeRun(checkQuebraHoraForte,'checkQuebraHoraForte');
+  safeRun(checkBoletimDiario,'checkBoletimDiario');
 }
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
