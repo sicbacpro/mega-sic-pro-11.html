@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-124</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-125</div>
   </div>
 
   <!-- Display PIN -->
@@ -3612,25 +3612,17 @@ const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/jso
 const manifestURL = URL.createObjectURL(manifestBlob);
 document.getElementById('pwa-manifest').href = manifestURL;
 
-// Service Worker inline
-const swCode = `
-const CACHE = 'sic-bac-pro-v1';
-self.addEventListener('install', e => {
-  self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(clients.claim());
-});
-self.addEventListener('fetch', e => {
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-});
-`;
-
-// Registar Service Worker via blob
+// Service Worker: removido o registo instável via blob URL (mudava a cada
+// carregamento, o que podia deixar o browser preso a correr uma versão antiga
+// do worker, servindo uma cópia desatualizada da app mesmo depois do ficheiro
+// no GitHub já estar certo — nem modo anónimo nem "limpar cache" resolviam
+// isso, porque é um tipo de cache diferente). Em vez disso, desregista
+// ativamente qualquer Service Worker que já tenha ficado preso de uma versão
+// anterior da app.
 if('serviceWorker' in navigator){
-  const swBlob = new Blob([swCode], {type:'application/javascript'});
-  const swURL = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swURL, {scope:'/'}).catch(()=>{});
+  navigator.serviceWorker.getRegistrations().then(function(registrations){
+    registrations.forEach(function(reg){ reg.unregister(); });
+  }).catch(function(){});
 }
 
 // Capturar evento de instalação
