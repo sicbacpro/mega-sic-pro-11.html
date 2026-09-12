@@ -574,7 +574,6 @@ textarea:focus{border-color:var(--green)!important;}
   <button class="nav-tab tab-dash active" onclick="goPage('dashboard',this)"><span class="ti">🏠</span>Início</button>
   <button class="nav-tab" onclick="goPage('triplos',this)"><span class="ti">🟢</span>Triplos</button>
   <button class="nav-tab tab-quad" onclick="goPage('quadras',this)" style="position:relative;"><span class="ti">🟡</span>Quadras<span id="nav-quad-badge" style="display:none;position:absolute;top:2px;right:6px;width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;animation:urgpulse 1s infinite;"></span></button>
-  <button class="nav-tab tab-dup" onclick="goPage('duplos',this)"><span class="ti">🟣</span>Duplos</button>
   <button class="nav-tab tab-fin" onclick="goPage('financeiro',this)"><span class="ti">💰</span>Finanças</button>
   <button class="nav-tab tab-banca" onclick="goPage('banca',this)"><span class="ti">🏦</span>Banca</button>
   <button class="nav-tab tab-padroes" onclick="goPage('padroes',this)"><span class="ti">📊</span>Análise</button>
@@ -844,26 +843,6 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
-  <!-- RADAR DOS NÚMEROS -->
-  <div class="card" style="margin-bottom:10px;">
-    <div class="ch">
-      <div class="ci" style="background:#0a0a20;">🎯</div>
-      <div><div class="ct">Radar dos Números</div><div class="cs">Frequência de cada número nos triplos</div></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 10px;">
-      <!-- Radar SVG -->
-      <svg id="dash-radar" viewBox="0 0 160 160" style="width:140px;height:140px;flex-shrink:0;"></svg>
-      <!-- Legenda -->
-      <div style="flex:1;" id="dash-radar-legend"></div>
-    </div>
-  </div>
-
-  <!-- ÚLTIMOS EVENTOS + CICLO DETECTOR inline -->
-  <div class="card" style="margin-bottom:10px;">
-    <div class="ch"><div class="ci" style="background:#0a0e1a;">🕐</div><div><div class="ct">Últimos Eventos</div><div class="cs">Triplos e quadras recentes</div></div></div>
-    <div id="dash-ultimos"></div>
-  </div>
-
   <!-- DETECTOR DE CICLO -->
   <div class="card" style="margin-bottom:10px;border-color:#1a1a3a;">
     <div class="ch" style="border-color:#1a1a3a;">
@@ -900,13 +879,6 @@ textarea:focus{border-color:var(--green)!important;}
         <div style="display:flex;gap:2px;margin-top:3px;" id="ciclo-hourly-labels"></div>
       </div>
     </div>
-  </div>
-
-  <!-- HISTÓRICO POR DIA -->
-  <div class="card">
-    <div class="ch"><div class="ci" style="background:#0a1010;">📅</div><div><div class="ct">Histórico por Dia</div><div class="cs">Comparação diária</div></div></div>
-    <div id="dash-por-dia"></div>
-    <div class="disclaimer">Baseado nos dados registados na app</div>
   </div>
 
 </div>
@@ -1388,77 +1360,6 @@ textarea:focus{border-color:var(--green)!important;}
 </div>
 
 <!-- ────────────── DUPLOS ────────────── -->
-<div class="page" id="page-duplos">
-
-  <!-- Stats PAR -->
-  <div style="padding:0 0 4px;font-size:0.46rem;font-weight:700;letter-spacing:0.18em;color:var(--purple);text-transform:uppercase;display:flex;align-items:center;gap:5px;"><span>🟣</span> PARES SIMPLES</div>
-  <div class="sg sg4" style="margin-bottom:8px;padding:0;">
-    <div class="sbox purple-box"><div class="sv c-purple" id="d-stat-par">0</div><div class="sl">Total<br>Pares</div></div>
-    <div class="sbox purple-box"><div class="sv c-purple" id="d-stat-par-intv">—</div><div class="sl">Intv.Médio<br>(min)</div></div>
-    <div class="sbox purple-box"><div class="sv c-purple" id="d-stat-par-ult">—</div><div class="sl">Último<br>Há(min)</div></div>
-    <div class="sbox purple-box"><div class="sv c-purple" id="d-stat-par-num">—</div><div class="sl">Nº Mais<br>Freq.</div></div>
-  </div>
-
-  <!-- Stats DUPLO PAR -->
-  <div style="padding:0 0 4px;font-size:0.46rem;font-weight:700;letter-spacing:0.18em;color:#e879f9;text-transform:uppercase;display:flex;align-items:center;gap:5px;"><span>🟤</span> DUPLOS PARES</div>
-  <div class="sg sg4" style="margin-bottom:10px;padding:0;">
-    <div class="sbox" style="border-color:#2a1040;background:#0a0610;"><div class="sv" style="color:#e879f9;font-size:1rem;" id="d-stat-dd">0</div><div class="sl">Total<br>Duplos</div></div>
-    <div class="sbox" style="border-color:#2a1040;background:#0a0610;"><div class="sv" style="color:#e879f9;font-size:1rem;" id="d-stat-dd-intv">—</div><div class="sl">Intv.Médio<br>(min)</div></div>
-    <div class="sbox" style="border-color:#2a1040;background:#0a0610;"><div class="sv" style="color:#e879f9;font-size:1rem;" id="d-stat-dd-ult">—</div><div class="sl">Último<br>Há(min)</div></div>
-    <div class="sbox" style="border-color:#2a1040;background:#0a0610;"><div class="sv" style="color:#e879f9;font-size:1rem;" id="d-stat-dd-combo">—</div><div class="sl">Combo<br>Mais Freq.</div></div>
-  </div>
-
-  <!-- Minutos Quentes Duplos -->
-  <div class="card purple-card" style="margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a1a3a;border-bottom:none;">
-      <div class="ci" style="background:var(--pd);">🔥</div>
-      <div><div class="ct" style="color:var(--purple);">Minutos Quentes</div><div class="cs"><span class="live-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple);"></span>Próximas janelas de duplos</div></div>
-    </div>
-    <div class="mini-tabs" style="border-color:#2a1a3a;">
-      <button class="mini-tab active" style="color:var(--dim2);" onclick="switchMiniDup('agora',this)">Agora</button>
-      <button class="mini-tab" onclick="switchMiniDup('hist',this)">Histórico</button>
-      <button class="mini-tab" onclick="switchMiniDup('pad',this)">Padrões</button>
-    </div>
-    <div id="d-tab-agora">
-      <div class="countdown" id="d-countdown" style="background:#080610;border-color:#2a1a3a;">
-        <span class="cd-lbl">⏱ Próximo duplo em</span>
-        <span class="cd-val" style="color:var(--purple);" id="d-cd">—</span>
-      </div>
-      <div id="d-slots"><div class="empty">Regista duplos para gerar<br>os minutos quentes! 🟣</div></div>
-      <div class="disclaimer" style="border-color:#2a1a3a;">⚠ Padrão histórico. Não garante resultados futuros.</div>
-    </div>
-    <div id="d-tab-hist" style="display:none;">
-      <div id="d-hist"><div class="empty">Sem histórico de duplos.</div></div>
-    </div>
-    <div id="d-tab-pad" style="display:none;">
-      <div style="padding:8px 8px 4px;font-size:0.48rem;font-weight:700;letter-spacing:0.15em;color:var(--purple);text-transform:uppercase;">Frequência por número</div>
-      <div class="freq-grid" id="d-freq-par"></div>
-      <div style="padding:8px 8px 4px;font-size:0.48rem;font-weight:700;letter-spacing:0.15em;color:#e879f9;text-transform:uppercase;margin-top:4px;">Combinações duplo par</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 8px 8px;" id="d-freq-dd"></div>
-      <div class="insight-list" id="d-insights"></div>
-    </div>
-  </div>
-
-  <!-- Registar -->
-  <div class="card purple-card">
-    <div class="ch" style="border-color:#2a1a3a;"><div class="ci" style="background:var(--pd);">🟣</div><div><div class="ct" style="color:var(--purple);">Registar Duplo</div><div class="cs">Par simples ou duplo par</div></div></div>
-    <div style="padding:6px 8px 4px;">
-      <div style="display:flex;align-items:center;gap:6px;background:#080610;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:0.6rem;min-height:30px;" id="dup-detector">
-        <span style="color:var(--dim2);">Introduz os 4 dados para detetar...</span>
-      </div>
-    </div>
-    <div class="form-grid" style="grid-template-columns:repeat(4,1fr) auto auto;">
-      <div class="ff"><label>D1</label><input type="number" id="d-d1" min="1" max="6" placeholder="—" class="purple-inp" oninput="detectDup()"></div>
-      <div class="ff"><label>D2</label><input type="number" id="d-d2" min="1" max="6" placeholder="—" class="purple-inp" oninput="detectDup()"></div>
-      <div class="ff"><label>D3</label><input type="number" id="d-d3" min="1" max="6" placeholder="—" class="purple-inp" oninput="detectDup()"></div>
-      <div class="ff"><label>D4</label><input type="number" id="d-d4" min="1" max="6" placeholder="—" class="purple-inp" oninput="detectDup()"></div>
-      <div class="ff"><label>Hora</label><input type="time" id="d-hora" style="font-size:0.55rem;padding:9px 3px;" class="purple-inp"></div>
-      <div class="ff"><label>Ganho</label><input type="number" id="d-gn" placeholder="R$" class="purple-inp" style="font-size:0.7rem;"></div>
-    </div>
-    <div class="bwrap"><button class="btn btn-purple" onclick="addDuplo()">🟣 Registar Duplo</button></div>
-  </div>
-</div>
-
 <!-- ────────────── FINANCEIRO ────────────── -->
 <div class="page" id="page-financeiro">
 
@@ -1833,15 +1734,6 @@ textarea:focus{border-color:var(--green)!important;}
     </div>
   </div>
 
-  <!-- NÚMEROS A EVITAR HOJE -->
-  <div class="card" style="border-color:#2a3a1a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a3a1a;">
-      <div class="ci" style="background:#0a1005;">🧊</div>
-      <div><div class="ct" style="color:#94a3b8;">Números a Evitar Hoje</div><div class="cs">O oposto dos números quentes — os mais "frios" desta hora</div></div>
-    </div>
-    <div id="numeros-frios" style="padding:8px;"></div>
-  </div>
-
   <!-- HEATMAP DO MÊS -->
   <div class="card" style="border-color:#1a3a2a;margin-bottom:10px;">
     <div class="ch" style="border-color:#1a3a2a;">
@@ -1849,15 +1741,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--green);">Heatmap do Mês</div><div class="cs">Intensidade de Triplos + Quadras, dia a dia</div></div>
     </div>
     <div id="heatmap-mes" style="padding:8px;"></div>
-  </div>
-
-  <!-- RESUMO POR TURNO -->
-  <div class="card" style="border-color:#2a1a3a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a1a3a;">
-      <div class="ci" style="background:#150a20;">🕐</div>
-      <div><div class="ct" style="color:#a78bfa;">Resumo por Turno</div><div class="cs">Madrugada · Manhã · Tarde · Noite — qual é o teu mais forte</div></div>
-    </div>
-    <div id="turno-resumo" style="padding:8px;"></div>
   </div>
 
   <!-- RADAR DE CONVERGÊNCIA DOS NÚMEROS -->
@@ -1881,34 +1764,10 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="streak-historico" style="padding:8px;"></div>
   </div>
 
-  <!-- ANÁLISE DE INTERVALOS -->
-  <div class="card" style="margin-bottom:10px;">
-    <div class="ch">
-      <div class="ci" style="background:#0a1020;">📐</div>
-      <div><div class="ct">Análise de Intervalos</div><div class="cs">Distribuição dos tempos entre triplos</div></div>
-    </div>
-    <div style="padding:8px 10px 10px;">
-      <div style="font-size:0.48rem;color:var(--dim2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">DISTRIBUIÇÃO DE INTERVALOS (minutos)</div>
-      <div id="intervalo-bars"></div>
-      <div id="intervalo-stats" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
-      <div id="intervalo-previsao"></div>
-    </div>
-  </div>
-
   <!-- VISAO PROFUNDA HEADER -->
   <div style="margin:18px 0 6px;padding:10px 12px;background:linear-gradient(135deg,#080514,#0a1408);border:1px solid #2a1a4a;border-radius:12px;text-align:center;">
     <div style="font-family:var(--font-display);font-size:1.3rem;letter-spacing:0.12em;color:var(--white);margin-bottom:2px;">🦅 VISÃO PROFUNDA</div>
     <div style="font-size:0.5rem;color:var(--dim2);letter-spacing:0.08em;">Análise cruzada · Triplos + Quadras + Duplos</div>
-  </div>
-
-  <!-- CLUSTERS DE ATIVIDADE -->
-  <div class="card" style="border-color:#3a2a0a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#3a2a0a;">
-      <div class="ci" style="background:#1a1005;">🌡️</div>
-      <div><div class="ct" style="color:var(--gold);">Clusters de Atividade</div><div class="cs">🌡️ Visão geral — blocos ativos vs mortos, sem separar por número</div></div>
-    </div>
-    <div id="vp-clusters" style="padding:8px;"></div>
-    <div style="padding:0 8px 8px;font-size:0.42rem;color:var(--dim2);">Para ver por número específico → <span onclick="irParaSubAbaAnalise('calor')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Calor</span>. Para uma hora concreta → <span onclick="irParaSubAbaAnalise('hora')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Por Hora</span>.</div>
   </div>
 
   <!-- RITMO DO JOGO -->
@@ -1921,15 +1780,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="padding:0 8px 8px;font-size:0.42rem;color:var(--dim2);">Isto é a tendência global de Triplos/Quadras/Duplos. Para a hora específica de agora → <span onclick="irParaSubAbaAnalise('hora')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Por Hora</span>. Para o intervalo entre rodadas → <span onclick="irParaSubAbaAnalise('minutos')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Minutos</span>.</div>
   </div>
 
-  <!-- ANTI-STREAKS -->
-  <div class="card" style="border-color:#2a1a0a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a1a0a;">
-      <div class="ci" style="background:#150a04;">🔕</div>
-      <div><div class="ct" style="color:var(--orange);">Ausência por Número</div><div class="cs">Quantos triplos passaram desde que cada número apareceu</div></div>
-    </div>
-    <div id="pad-anti-streaks" style="padding:8px;"></div>
-  </div>
-
   <!-- DENSIDADE TEMPORAL -->
   <div class="card" style="border-color:#1a3a2a;margin-bottom:10px;">
     <div class="ch" style="border-color:#1a3a2a;">
@@ -1937,92 +1787,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--cyan);">Densidade Temporal</div><div class="cs">Blocos de 15 min — quando o jogo aquece e arrefece</div></div>
     </div>
     <div id="vp-densidade" style="padding:8px;"></div>
-  </div>
-
-  <!-- CONSTRUTOR DE PADROES -->
-  <div class="card" style="border-color:#3a1a2a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#3a1a2a;">
-      <div class="ci" style="background:#1a0510;">🔗</div>
-      <div><div class="ct" style="color:#f472b6;">Construtor de Padrões</div><div class="cs">Conta quantas vezes uma sequência já aconteceu — sem prever o futuro</div></div>
-    </div>
-    <div style="padding:8px 10px;font-size:0.5rem;color:var(--dim2);line-height:1.6;background:#0a0508;margin:0 8px 8px;border-radius:8px;border:1px solid #2a1520;">
-      ⚠️ Esta ferramenta é puramente <b style="color:var(--text);">histórica e informativa</b>. Cada rodada é independente — o facto de um padrão já ter acontecido não muda a probabilidade da próxima rodada.
-    </div>
-
-    <!-- Lista de passos do padrao -->
-    <div style="padding:8px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div style="font-size:0.5rem;color:var(--dim2);letter-spacing:0.08em;">SEQUÊNCIA (na ordem que aconteceu)</div>
-        <button onclick="cpAddPasso()" style="font-size:0.5rem;padding:4px 9px;border-radius:6px;background:#2a1020;border:1px solid #f472b644;color:#f472b6;font-weight:700;">+ Passo</button>
-      </div>
-      <div id="cp-passos" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;"></div>
-    </div>
-
-    <!-- Editor do passo atual -->
-    <div id="cp-editor" style="display:none;padding:0 10px 10px;">
-      <div style="background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:10px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="font-size:0.56rem;color:#f472b6;font-weight:700;" id="cp-editor-titulo">Passo 1</div>
-          <button onclick="cpFecharEditor()" style="font-size:0.48rem;color:var(--dim2);">Fechar</button>
-        </div>
-
-        <div style="font-size:0.46rem;color:var(--dim2);letter-spacing:0.08em;margin-bottom:5px;">TIPO</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px;" id="cp-tipo-btns">
-          <button onclick="cpSetTipo('qualquer')" data-tipo="qualquer" class="cp-tipo-btn">Qualquer</button>
-          <button onclick="cpSetTipo('triplo')" data-tipo="triplo" class="cp-tipo-btn">🟢 Triplo</button>
-          <button onclick="cpSetTipo('quadra')" data-tipo="quadra" class="cp-tipo-btn">🟡 Quadra</button>
-          <button onclick="cpSetTipo('duplo')" data-tipo="duplo" class="cp-tipo-btn">🟣 Duplo</button>
-        </div>
-
-        <div style="font-size:0.46rem;color:var(--dim2);letter-spacing:0.08em;margin-bottom:5px;">NÚMERO (opcional)</div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px;" id="cp-num-btns">
-          <button onclick="cpSetNum(null)" data-num="null" class="cp-num-btn">Qq</button>
-          <button onclick="cpSetNum(1)" data-num="1" class="cp-num-btn">1</button>
-          <button onclick="cpSetNum(2)" data-num="2" class="cp-num-btn">2</button>
-          <button onclick="cpSetNum(3)" data-num="3" class="cp-num-btn">3</button>
-          <button onclick="cpSetNum(4)" data-num="4" class="cp-num-btn">4</button>
-          <button onclick="cpSetNum(5)" data-num="5" class="cp-num-btn">5</button>
-          <button onclick="cpSetNum(6)" data-num="6" class="cp-num-btn">6</button>
-        </div>
-
-        <div style="font-size:0.46rem;color:var(--dim2);letter-spacing:0.08em;margin-bottom:5px;">COR (opcional)</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
-          <button onclick="cpSetCor(null)" data-cor="null" class="cp-cor-btn">Qualquer</button>
-          <button onclick="cpSetCor('vermelho')" data-cor="vermelho" class="cp-cor-btn">🔴 Verm.</button>
-          <button onclick="cpSetCor('azul')" data-cor="azul" class="cp-cor-btn">🔵 Azul</button>
-          <button onclick="cpSetCor('verde')" data-cor="verde" class="cp-cor-btn">🟢 Verde</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Resultado da pesquisa -->
-    <div id="cp-resultado" style="padding:0 10px 10px;"><div class="empty">Define a sequência acima e toca em 🔍 Procurar para ver quantas vezes já aconteceu.</div></div>
-
-    <div class="bwrap" style="gap:6px;">
-      <button class="btn" style="flex:1;background:linear-gradient(135deg,#4a1d3a,#f472b6);color:#0a0408;" onclick="cpPesquisar()">🔍 Procurar</button>
-      <button class="btn" style="background:#1a1a30;border:1px solid #4a4a8a;color:#a5b4fc;" onclick="cpGuardarPadrao()">💾 Guardar</button>
-      <button class="btn" style="background:#1a0510;border:1px solid #3a1a2a;color:var(--dim2);" onclick="cpLimpar()">🗑</button>
-    </div>
-  </div>
-
-  <!-- SUGESTOES AUTOMATICAS -->
-  <div class="card" style="border-color:#2a1a3a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a1a3a;">
-      <div class="ci" style="background:#0a0518;">✨</div>
-      <div><div class="ct" style="color:#f472b6;">Sugestões Automáticas</div><div class="cs">Padrões mais frequentes no teu histórico</div></div>
-      <button onclick="cpSugerirPadroes()" style="background:#1a0520;border:1px solid #f472b644;border-radius:7px;padding:5px 10px;color:#f472b6;font-size:0.5rem;font-weight:700;cursor:pointer;flex-shrink:0;">🔄 Analisar</button>
-    </div>
-    <div id="cp-sugestoes" style="padding:8px;"><div class="empty">A analisar o teu histórico...</div></div>
-  </div>
-
-  <!-- BIBLIOTECA DE PADROES -->
-  <div class="card" style="border-color:#2a2a4a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a2a4a;">
-      <div class="ci" style="background:#0a0a20;">📚</div>
-      <div><div class="ct" style="color:#a5b4fc;">Biblioteca de Padrões</div><div class="cs">Padrões guardados — toca para pesquisar ou comparar</div></div>
-    </div>
-    <div id="cp-biblioteca" style="padding:8px;"></div>
-    <div id="cp-comparacao" style="padding:0 8px 8px;display:none;"></div>
   </div>
 
 <!-- fim aba profunda -->
@@ -4009,7 +3773,6 @@ function switchAnalise(tab, btn){
   if(tab==='profunda'){
     renderHeatmap(); // nao precisa mas garante consistencia
     renderStreaks();
-    renderIntervalosDist();
     renderVisaoProfunda();
     if(typeof window.cpRenderPassosPublic === 'function') window.cpRenderPassosPublic();
     if(typeof window.cpRenderBiblioteca === 'function') window.cpRenderBiblioteca();
@@ -5054,6 +4817,7 @@ function switchMiniDup(tab, btn){
 //  RENDER DUPLOS
 // ══════════════════════════════════════════════
 function renderDuplos(){
+  if(!document.getElementById('d-stat-par')) return; // aba Duplos removida — nada para atualizar
   const arr=S.duplos;
   const pares=arr.filter(d=>d.type==='PAR');
   const duplos=arr.filter(d=>d.type==='DUPLO PAR');
@@ -8950,7 +8714,6 @@ function renderDashboard(){
   if(typeof renderPersonalidadeJogo==='function') renderPersonalidadeJogo();
   if(typeof renderRelogioOportunidade==='function') renderRelogioOportunidade();
   renderDashChart(tHoje, h);
-  renderRadar();
   renderDashAgoraCard(h);
   renderDashMinutosQuentes(h);
 
@@ -8981,7 +8744,6 @@ function renderDashboard(){
       <span class="hbadge ${e.tipo==='QUADRA'?'hb-q':'hb-t'}">${e.tipo==='QUADRA'?'4x':'3x'}</span>
     </div>`).join('') : '<div class="empty">Sem eventos ainda.</div>';
 
-  renderHistoricoPorDia();
 }
 
 function renderDashChart(tHoje, horaAtual){
@@ -9036,45 +8798,6 @@ function renderDashChart(tHoje, horaAtual){
     <div style="flex:1;text-align:center;font-size:0.4rem;color:${h===horaAtual?'var(--cyan)':'var(--dim2)'};">${String(h).padStart(2,'0')}h</div>`).join('');
 }
 
-function renderRadar(){
-  const svg=document.getElementById('dash-radar');
-  const legend=document.getElementById('dash-radar-legend');
-  if(!svg) return;
-  const freq={1:0,2:0,3:0,4:0,5:0,6:0};
-  S.triplos.forEach(t=>freq[t.num]=(freq[t.num]||0)+1);
-  const maxF=Math.max(...Object.values(freq),1);
-  const colors=['','#ef4444','#f97316','#fbbf24','#4ade80','#38bdf8','#c084fc'];
-  const cx=80,cy=80,r=55,nums=[1,2,3,4,5,6];
-  const angleStep=(Math.PI*2)/6;
-  let s='';
-  [0.25,0.5,0.75,1].forEach(sc=>{
-    const pts=nums.map((_,i)=>{const a=i*angleStep-Math.PI/2;return `${cx+r*sc*Math.cos(a)},${cy+r*sc*Math.sin(a)}`;}).join(' ');
-    s+=`<polygon points="${pts}" fill="none" stroke="#1c2426" stroke-width="1"/>`;
-  });
-  nums.forEach((_,i)=>{
-    const a=i*angleStep-Math.PI/2;
-    s+=`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="#1c2426" stroke-width="1"/>`;
-  });
-  const pts=nums.map((n,i)=>{const a=i*angleStep-Math.PI/2,sc=freq[n]/maxF;return `${cx+r*sc*Math.cos(a)},${cy+r*sc*Math.sin(a)}`;}).join(' ');
-  s+=`<polygon points="${pts}" fill="#00e67618" stroke="#00e676" stroke-width="2" stroke-linejoin="round"/>`;
-  nums.forEach((n,i)=>{
-    const a=i*angleStep-Math.PI/2,sc=freq[n]/maxF;
-    const px=cx+r*sc*Math.cos(a),py=cy+r*sc*Math.sin(a);
-    const lx=cx+(r+14)*Math.cos(a),ly=cy+(r+14)*Math.sin(a);
-    s+=`<circle cx="${px}" cy="${py}" r="4" fill="${colors[n]}" stroke="#07090a" stroke-width="2"/>`;
-    s+=`<text x="${lx}" y="${ly+4}" text-anchor="middle" font-size="11" font-weight="bold" fill="${colors[n]}" font-family="monospace">${n}</text>`;
-  });
-  svg.innerHTML=s;
-  if(legend){
-    const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
-    legend.innerHTML=sorted.map(([n,c])=>`
-      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${colors[parseInt(n)]};flex-shrink:0;"></div>
-        <div style="font-size:0.52rem;color:var(--text);">Nº <b style="color:${colors[parseInt(n)]};">${n}</b></div>
-        <div style="font-family:var(--font-mono);font-size:0.52rem;color:var(--dim2);margin-left:auto;">${c}x</div>
-      </div>`).join('');
-  }
-}
 
 function renderTimers(){
   // Triplo timer
@@ -9129,45 +8852,6 @@ function renderTimers(){
       }
     }
   }
-}
-
-function renderHistoricoPorDia(){
-  const c = document.getElementById('dash-por-dia');
-  if(!c) return;
-  const dias = {};
-  const addToDia = (arr, tipo) => arr.forEach(item=>{
-    if(!item.ts) return;
-    const dia = new Date(item.ts).toISOString().slice(0,10);
-    if(!dias[dia]) dias[dia]={triplos:0,quadras:0,duplos:0,ivs:[]};
-    dias[dia][tipo]++;
-    if(tipo==='triplos'&&item.interval!=null&&item.interval>0&&item.interval<120) dias[dia].ivs.push(item.interval);
-  });
-  addToDia(S.triplos,'triplos');
-  addToDia(S.quadras,'quadras');
-  addToDia(S.duplos,'duplos');
-  const sorted = Object.entries(dias).sort((a,b)=>b[0].localeCompare(a[0]));
-  if(!sorted.length){ c.innerHTML='<div class="empty">Sem dados por dia ainda.</div>'; return; }
-  const maxT = Math.max(...sorted.map(([,d])=>d.triplos),1);
-  c.innerHTML = sorted.map(([dia,d])=>{
-    const dateLabel = new Date(dia+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
-    const avg = d.ivs.length?(d.ivs.reduce((a,b)=>a+b,0)/d.ivs.length).toFixed(1):'—';
-    const pct = Math.round((d.triplos/maxT)*100);
-    const isHoje = dia===new Date().toISOString().slice(0,10);
-    return `<div style="padding:10px 12px;border-bottom:1px solid var(--border);${isHoje?'background:#060e06;':''}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div style="font-family:var(--font-mono);font-size:0.65rem;font-weight:700;color:${isHoje?'var(--green)':'var(--white)'};">${isHoje?'● HOJE — ':''}${dateLabel}</div>
-        <div style="display:flex;gap:5px;">
-          <span style="font-size:0.48rem;background:var(--gd2);color:var(--green);padding:2px 6px;border-radius:4px;">${d.triplos}🟢</span>
-          <span style="font-size:0.48rem;background:var(--god);color:var(--gold);padding:2px 6px;border-radius:4px;">${d.quadras}🟡</span>
-          <span style="font-size:0.48rem;background:var(--pd);color:var(--purple);padding:2px 6px;border-radius:4px;">${d.duplos}🟣</span>
-        </div>
-      </div>
-      <div style="height:4px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:4px;">
-        <div style="height:100%;width:${pct}%;background:${isHoje?'linear-gradient(90deg,var(--green),var(--cyan))':'linear-gradient(90deg,var(--dim2),var(--dim))'};border-radius:3px;"></div>
-      </div>
-      <div style="font-size:0.48rem;color:var(--dim2);">Intv. médio: <span style="color:var(--text);">${avg} min</span></div>
-    </div>`;
-  }).join('');
 }
 
 function renderDashAgoraCard(horaAtual){
@@ -9351,7 +9035,6 @@ function initChecklistSinais(){
 function renderPadroes(){
   renderHeatmap();
   renderStreaks();
-  renderIntervalosDist();
   renderVisaoProfunda();
   safeRun(renderOndeEstou,'renderOndeEstou');
   safeRun(renderRelatorioSemanal,'renderRelatorioSemanal');
@@ -9369,9 +9052,7 @@ function renderPadroes(){
   safeRun(renderSessaoGemea,'renderSessaoGemea');
   safeRun(renderExplosaoNoturna,'renderExplosaoNoturna');
   safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
-  safeRun(renderNumerosFrios,'renderNumerosFrios');
   safeRun(renderHeatmapMes,'renderHeatmapMes');
-  safeRun(renderResumoTurno,'renderResumoTurno');
   safeRun(renderRadarConvergencia,'renderRadarConvergencia');
   safeRun(function(){ if(typeof window.cpSugerirPadroes==='function') window.cpSugerirPadroes(); },'cpSugerirPadroes-auto');
 }
@@ -10646,38 +10327,6 @@ function renderOndeEstou(){
 // ══════════════════════════════════════════════
 //  NÚMEROS A EVITAR HOJE (inverso dos números quentes)
 // ══════════════════════════════════════════════
-function renderNumerosFrios(){
-  const el = document.getElementById('numeros-frios');
-  if(!el) return;
-  const horaAtual = new Date().getHours();
-  const ev = minGetTodosEventos('combinado','todos','tudo').filter(function(e){ return horaGetHora(e.hora)===horaAtual; });
-  if(ev.length<5){
-    el.innerHTML = '<div class="empty">Ainda há poucos registos para esta hora ('+ev.length+'). Precisa de pelo menos 5 para calcular números frios.</div>';
-    return;
-  }
-  const freq = {1:0,2:0,3:0,4:0,5:0,6:0};
-  ev.forEach(function(e){ if(e.num>=1&&e.num<=6) freq[e.num]++; });
-  const entradas = Object.entries(freq).map(function(p){return {num:parseInt(p[0]),cnt:p[1]};});
-  const frios = entradas.slice().sort(function(a,b){return a.cnt-b.cnt;}).slice(0,2);
-  const quentes = entradas.slice().sort(function(a,b){return b.cnt-a.cnt;}).slice(0,2);
-
-  el.innerHTML = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:8px;">Baseado em '+ev.length+' registo(s) às '+pad(horaAtual)+'h, ao longo do teu histórico.</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
-    + frios.map(function(f){
-        return '<div style="flex:1;background:#0a1420;border:1px solid #64748b44;border-radius:10px;padding:10px;text-align:center;">'
-          +'<div style="font-family:var(--font-mono);font-size:1.4rem;font-weight:700;color:#94a3b8;">'+f.num+'</div>'
-          +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:2px;">'+f.cnt+'x nesta hora</div>'
-          +'</div>';
-      }).join('')
-    +'</div>'
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:4px;">Para comparação, os mais quentes desta hora:</div>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
-    + quentes.map(function(q){
-        return '<span style="background:#ef444422;border:1px solid #ef444455;border-radius:7px;padding:4px 9px;font-family:var(--font-mono);font-size:0.6rem;font-weight:700;color:#ef4444;">'+q.num+' · '+q.cnt+'x</span>';
-      }).join('')
-    +'</div>'
-    +'<div class="disclaimer">⚠ Curiosidade estatística sobre o teu histórico — cada rodada é independente e aleatória, não é uma recomendação de aposta.</div>';
-}
 
 // ══════════════════════════════════════════════
 //  HEATMAP DO MÊS (estilo "contribuições" GitHub)
@@ -10770,75 +10419,6 @@ function classificarTurno(hora){
   return turno;
 }
 
-function renderResumoTurno(){
-  const el = document.getElementById('turno-resumo');
-  if(!el) return;
-  const combinado = [];
-  S.triplos.forEach(function(t){ if(t.hora) combinado.push({hora:t.hora, tipo:'T'}); });
-  S.quadras.forEach(function(q){ if(q.hora) combinado.push({hora:q.hora, tipo:'Q'}); });
-  if(combinado.length<5){
-    el.innerHTML = '<div class="empty">Regista mais Triplos/Quadras para veres o resumo por turno.</div>';
-    return;
-  }
-
-  const cont = {madrugada:{T:0,Q:0}, manha:{T:0,Q:0}, tarde:{T:0,Q:0}, noite:{T:0,Q:0}};
-  combinado.forEach(function(e){
-    const h = parseInt(e.hora.split(':')[0]);
-    if(isNaN(h)) return;
-    const turno = classificarTurno(h);
-    cont[turno][e.tipo]++;
-  });
-
-  const ordemVisual = ['madrugada','manha','tarde','noite'];
-  const totais = ordemVisual.map(function(k){ return {key:k, total:cont[k].T+cont[k].Q}; });
-  const melhor = totais.slice().sort(function(a,b){return b.total-a.total;})[0];
-  const maxTotal = Math.max.apply(null, totais.map(function(t){return t.total;}).concat([1]));
-
-  const entries = turnoEntriesOrdenadas();
-  function faixaTexto(turno){
-    const idx = entries.findIndex(function(e){return e[0]===turno;});
-    const inicio = entries[idx][1];
-    const fim = entries[(idx+1)%entries.length][1];
-    return pad(inicio)+'h–'+pad(fim)+'h';
-  }
-
-  let html = '';
-  ordemVisual.forEach(function(k){
-    const info = TURNO_INFO[k];
-    const c = cont[k];
-    const total = c.T+c.Q;
-    const pct = Math.round((total/maxTotal)*100);
-    const isMelhor = k===melhor.key && total>0;
-    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:6px;border-radius:9px;background:'+(isMelhor?info.cor+'18':'var(--card2)')+';border:1px solid '+(isMelhor?info.cor+'55':'var(--border)')+';">'
-      +'<div style="font-size:1.1rem;">'+info.emoji+'</div>'
-      +'<div style="flex:1;">'
-      +'<div style="font-size:0.5rem;font-weight:700;color:'+(isMelhor?info.cor:'var(--text)')+';">'+info.nome+(isMelhor?' 🏆':'')+'</div>'
-      +'<div style="font-size:0.4rem;color:var(--dim2);">'+faixaTexto(k)+'</div>'
-      +'<div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:3px;"><div style="width:'+pct+'%;height:100%;background:'+info.cor+';"></div></div>'
-      +'</div>'
-      +'<div style="text-align:right;">'
-      +'<div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;color:var(--text);">'+total+'</div>'
-      +'<div style="font-size:0.38rem;color:var(--dim2);">🟢'+c.T+' 🟡'+c.Q+'</div>'
-      +'</div>'
-      +'</div>';
-  });
-
-  html += (melhor.total>0 ? '<div style="background:var(--card2);border-radius:8px;padding:8px 10px;font-size:0.48rem;color:var(--text);margin-top:4px;">🏆 Turno mais forte no teu histórico: <b style="color:'+TURNO_INFO[melhor.key].cor+';">'+TURNO_INFO[melhor.key].nome+'</b> ('+melhor.total+' registos)</div>' : '')
-    +'<div style="margin-top:8px;text-align:center;"><button onclick="toggleTurnoConfig()" style="font-size:0.44rem;padding:6px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--dim2);cursor:pointer;">⚙️ Personalizar horários</button></div>'
-    +'<div id="turno-config" style="display:none;margin-top:8px;background:#0a0a14;border-radius:8px;padding:8px 10px;">'
-      +['madrugada','manha','tarde','noite'].map(function(k){
-        const b = getTurnoBoundaries();
-        return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
-          +'<span style="font-size:0.44rem;color:var(--dim2);">'+TURNO_INFO[k].emoji+' '+TURNO_INFO[k].nome+' começa às</span>'
-          +'<input type="number" min="0" max="23" value="'+b[k]+'" id="turno-inp-'+k+'" style="width:50px;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:0.5rem;text-align:center;">'
-          +'</div>';
-      }).join('')
-    +'<button onclick="salvarTurnoConfig()" style="width:100%;margin-top:4px;padding:7px;border-radius:7px;background:var(--green);color:#04210f;font-weight:700;font-size:0.48rem;border:none;">Guardar</button>'
-    +'</div>'
-    +'<div class="disclaimer" style="margin-top:8px;">⚠ Reflete apenas a distribuição do teu histórico registado.</div>';
-
-  el.innerHTML = html;
-}
 
 function toggleTurnoConfig(){
   const el = document.getElementById('turno-config');
@@ -10853,7 +10433,6 @@ function salvarTurnoConfig(){
   });
   setTurnoBoundaries(b);
   showToast('⏰ Horários dos turnos atualizados!','green');
-  renderResumoTurno();
 }
 
 // ══════════════════════════════════════════════
@@ -11049,7 +10628,6 @@ function renderComparadorCabecaCabeca(){
 //  VISAO PROFUNDA
 // =====================================
 function renderVisaoProfunda(){
-  vpClusters();
   vpRitmo();
   vpDensidade();
     if(typeof renderAntiStreaks==='function') renderAntiStreaks();
@@ -11280,42 +10858,6 @@ function vpRelacoes(){
   }).join('');
 }
 
-function vpClusters(){
-  const el = document.getElementById('vp-clusters');
-  if(!el) return;
-  const events = buildTimeline();
-  if(events.length<3){ el.innerHTML='<div class="empty">Sem dados suficientes.</div>'; return; }
-  const hMap = {};
-  events.forEach(function(e){
-    if(!e.hora) return;
-    const h = parseInt(e.hora.split(':')[0]);
-    if(!hMap[h]) hMap[h]={total:0,T:0,Q:0,D:0};
-    hMap[h].total++;
-    hMap[h][e.tipo]=(hMap[h][e.tipo]||0)+1;
-  });
-  const horas = Object.keys(hMap).map(Number).sort(function(a,b){return a-b;});
-  const maxTotal = Math.max.apply(null,horas.map(function(h){return hMap[h].total;}).concat([1]));
-  el.innerHTML = horas.map(function(h){
-    const d = hMap[h];
-    const pct = Math.round((d.total/maxTotal)*100);
-    const heat = pct>=80?'#ef4444':pct>=50?'#f97316':pct>=25?'#fbbf24':'#1a6a1a';
-    const tW = Math.round((d.T/d.total)*100);
-    const qW = Math.round((d.Q/d.total)*100);
-    const dW = 100-tW-qW;
-    const hStr = h.toString().padStart(2,'0');
-    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
-      +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);min-width:28px;">'+hStr+'h</span>'
-      +'<div style="flex:1;height:16px;border-radius:4px;overflow:hidden;background:var(--border);display:flex;">'
-      +'<div style="width:'+tW+'%;background:#4ade80;height:100%;"></div>'
-      +'<div style="width:'+qW+'%;background:#fbbf24;height:100%;"></div>'
-      +'<div style="width:'+dW+'%;background:#c084fc;height:100%;"></div></div>'
-      +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:'+heat+';min-width:24px;font-weight:700;">'+d.total+'</span></div>';
-  }).join('')
-  +'<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;">'
-  +'<span style="font-size:0.44rem;color:#4ade80;">&#9632; Triplos</span>'
-  +'<span style="font-size:0.44rem;color:#fbbf24;">&#9632; Quadras</span>'
-  +'<span style="font-size:0.44rem;color:#c084fc;">&#9632; Duplos</span></div>';
-}
 
 function vpGaps(){
   const el = document.getElementById('vp-gaps');
@@ -11427,446 +10969,6 @@ function vpRitmo(){
   }
   el.innerHTML = '<div style="padding:0 4px;">'+rows+'</div>'+tqRows;
 }
-// =====================================
-//  CONSTRUTOR DE PADROES
-// =====================================
-(function(){
-  const CP = {
-    passos: [
-      { tipo:'qualquer', num:null, cor:null }
-    ],
-    editando: 0,
-  };
-  window.CP = CP;
-
-  window.cpAddPasso = function(){
-    if(CP.passos.length >= 6){ showToast('Maximo de 6 passos.','warn'); return; }
-    CP.passos.push({ tipo:'qualquer', num:null, cor:null });
-    CP.editando = CP.passos.length-1;
-    cpRenderPassos();
-    cpAbrirEditor();
-  };
-
-  window.cpRemovePasso = function(idx, ev){
-    if(ev) ev.stopPropagation();
-    if(CP.passos.length<=1){ showToast('Precisa de pelo menos 1 passo.','warn'); return; }
-    CP.passos.splice(idx,1);
-    if(CP.editando>=CP.passos.length) CP.editando = CP.passos.length-1;
-    cpRenderPassos();
-    cpFecharEditor();
-  };
-
-  window.cpEditarPasso = function(idx){
-    CP.editando = idx;
-    cpRenderPassos();
-    cpAbrirEditor();
-  };
-
-  window.cpAbrirEditor = function(){
-    const editor = document.getElementById('cp-editor');
-    if(editor) editor.style.display='block';
-    const titulo = document.getElementById('cp-editor-titulo');
-    if(titulo) titulo.textContent = 'Passo '+(CP.editando+1);
-    cpSyncEditorUI();
-  };
-
-  window.cpFecharEditor = function(){
-    const editor = document.getElementById('cp-editor');
-    if(editor) editor.style.display='none';
-    cpRenderPassos();
-  };
-
-  window.cpSetTipo = function(tipo){
-    CP.passos[CP.editando].tipo = tipo;
-    if(tipo!=='triplo'&&tipo!=='quadra') CP.passos[CP.editando].num=null;
-    cpSyncEditorUI();
-    cpRenderPassos();
-  };
-
-  window.cpSetNum = function(num){
-    CP.passos[CP.editando].num = num;
-    cpSyncEditorUI();
-    cpRenderPassos();
-  };
-
-  window.cpSetCor = function(cor){
-    CP.passos[CP.editando].cor = cor;
-    cpSyncEditorUI();
-    cpRenderPassos();
-  };
-
-  function cpSyncEditorUI(){
-    const p = CP.passos[CP.editando];
-    document.querySelectorAll('.cp-tipo-btn').forEach(function(b){
-      b.classList.toggle('active', b.dataset.tipo===p.tipo);
-    });
-    document.querySelectorAll('.cp-num-btn').forEach(function(b){
-      const bn = b.dataset.num==='null'?null:parseInt(b.dataset.num);
-      b.classList.toggle('active', bn===p.num);
-    });
-    document.querySelectorAll('.cp-cor-btn').forEach(function(b){
-      const bc = b.dataset.cor==='null'?null:b.dataset.cor;
-      b.classList.toggle('active', bc===p.cor);
-    });
-  }
-
-  function cpLabelPasso(p){
-    const tipoNome = {qualquer:'Qualquer',triplo:'🟢Triplo',quadra:'🟡Quadra',duplo:'🟣Duplo'};
-    let label = tipoNome[p.tipo]||'Qualquer';
-    if(p.num) label += ' '+p.num;
-    const corIcon = {vermelho:'🔴',azul:'🔵',verde:'🟢'};
-    if(p.cor) label = (corIcon[p.cor]||'')+' '+label;
-    return label;
-  }
-
-  function cpRenderPassos(){
-    const el = document.getElementById('cp-passos');
-    if(!el) return;
-    el.innerHTML = CP.passos.map(function(p,i){
-      const editing = i===CP.editando && document.getElementById('cp-editor').style.display==='block';
-      return '<div class="cp-passo-card'+(editing?' editing':'')+'" onclick="cpEditarPasso('+i+')">'
-        +'<div style="position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:#2a0a14;border:1px solid #4a1a24;color:#f87171;font-size:0.5rem;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="cpRemovePasso('+i+',event)">&times;</div>'
-        +'<div style="font-size:0.42rem;color:var(--dim2);margin-bottom:4px;">#'+(i+1)+'</div>'
-        +'<div style="font-size:0.52rem;color:var(--text);font-weight:600;line-height:1.3;">'+cpLabelPasso(p)+'</div>'
-        +'</div>';
-    }).join('');
-  }
-
-  window.cpLimpar = function(){
-    CP.passos = [{tipo:'qualquer',num:null,cor:null}];
-    CP.editando = 0;
-    cpRenderPassos();
-    cpFecharEditor();
-    document.getElementById('cp-resultado').innerHTML='';
-  };
-
-  window.cpPesquisar = function(){
-    const events = buildTimeline(); // ja existe, ordenado do mais recente para o mais antigo
-    if(events.length < CP.passos.length){
-      document.getElementById('cp-resultado').innerHTML = '<div class="empty">Histórico insuficiente para esta sequência.</div>';
-      return;
-    }
-    // events[0] = mais recente. Para procurar a sequencia na ordem cronologica,
-    // vamos inverter para ordem cronologica (mais antigo primeiro)
-    const chrono = events.slice().reverse();
-    const n = CP.passos.length;
-    const matches = [];
-
-    for(let i=0; i<=chrono.length-n; i++){
-      let ok = true;
-      for(let j=0; j<n; j++){
-        if(!cpEventMatchesPasso(chrono[i+j], CP.passos[j])){ ok=false; break; }
-      }
-      if(ok){
-        matches.push(chrono.slice(i, i+n));
-      }
-    }
-
-    cpRenderResultado(matches, chrono.length);
-  };
-
-  function cpEventMatchesPasso(ev, p){
-    if(p.tipo!=='qualquer'){
-      const tipoMap = {triplo:'T', quadra:'Q', duplo:'D'};
-      if(ev.tipo !== tipoMap[p.tipo]) return false;
-    }
-    if(p.num!=null){
-      if(ev.num !== p.num) return false;
-    }
-    if(p.cor!=null){
-      // A cor do resultado (vermelho/azul/verde) so esta disponivel em registos
-      // importados via Entrada Rapida ou Grelha Rapida. Registos manuais antigos
-      // sem este campo simplesmente nao correspondem a um filtro de cor (esperado).
-      if(ev.corOriginal !== p.cor) return false;
-    }
-    return true;
-  }
-
-  function cpRenderResultado(matches, totalEventos){
-    const el = document.getElementById('cp-resultado');
-    if(!el) return;
-
-    if(!matches.length){
-      el.innerHTML = '<div style="background:#0a0508;border:1px solid #2a1520;border-radius:9px;padding:12px;text-align:center;">'
-        +'<div style="font-size:0.6rem;color:var(--dim2);">Este padr\xe3o ainda n\xe3o aconteceu no teu hist\xf3rico.</div>'
-        +'<div style="font-size:0.46rem;color:var(--dim2);margin-top:4px;">('+totalEventos+' eventos analisados)</div>'
-        +'</div>';
-      return;
-    }
-
-    const n = matches.length;
-    const janelas = Math.max(1, totalEventos - CP.passos.length + 1);
-    const pct = (n/janelas)*100;
-
-    // SEMAFORO DE CONFIANCA ESTATISTICA
-    // Baseado em: numero de ocorrencias + intervalo de confianca de Wilson
-    // Wilson interval: (p + z2/2n +/- z*sqrt(p(1-p)/n + z2/4n2)) / (1 + z2/n)
-    // z = 1.96 para 95% confianca
-    const z = 1.96;
-    const p = n/janelas;
-    const z2 = z*z;
-    const center = (p + z2/(2*janelas));
-    const margin = z*Math.sqrt(p*(1-p)/janelas + z2/(4*janelas*janelas));
-    const denom = 1 + z2/janelas;
-    const low = Math.max(0, (center-margin)/denom)*100;
-    const high = Math.min(100, (center+margin)/denom)*100;
-    const intervalo = '('+low.toFixed(1)+'% \u2013 '+high.toFixed(1)+'%)';
-
-    // Classificacao do semaforo
-    let semaforo, semaforoCor, semaforoDesc;
-    if(n < 10){
-      semaforo = '\ud83d\udd34'; semaforoCor = '#ef4444';
-      semaforoDesc = 'N\xe3o confiar \u2014 menos de 10 ocorr\xeancias. Qualquer coisa pode dar 70% com t\xe3o poucos dados.';
-    } else if(n < 30){
-      semaforo = '\ud83d\udfe1'; semaforoCor = '#fbbf24';
-      semaforoDesc = 'Observar \u2014 sinal emergente, mas precisa de mais dados para confirmar.';
-    } else {
-      // 30+ ocorrencias: verificar se a percentagem e significativamente diferente do esperado pela aleatoriedade
-      // Esperado aleatorio: P(evento) = aprox 1/3 para triplo/quadra/duplo qualquer, varia por padrao
-      // Usamos: se o intervalo de confianca nao inclui "1/3" e tem 30+ dados = verde
-      const expectedRandom = 1/3; // simplificado
-      const significativo = low/100 > expectedRandom*0.5 || high/100 < expectedRandom*1.5;
-      if(n >= 30){
-        semaforo = '\ud83d\udfe2'; semaforoCor = '#4ade80';
-        semaforoDesc = 'Padr\xe3o consistente \u2014 30+ ocorr\xeancias. Intervalo de confian\xe7a estreito.';
-      } else {
-        semaforo = '\ud83d\udfe1'; semaforoCor = '#fbbf24';
-        semaforoDesc = 'Observar \u2014 dados suficientes para notar, mas ainda inconclusivo.';
-      }
-    }
-
-    let html = '<div style="background:#0a0508;border:1px solid '+semaforoCor+'44;border-radius:9px;padding:10px;margin-bottom:8px;">'
-
-      // Linha principal: numero + semaforo
-      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
-      +'<div style="font-size:1.6rem;">'+semaforo+'</div>'
-      +'<div>'
-      +'<div style="display:flex;align-items:baseline;gap:5px;">'
-      +'<span style="font-family:var(--font-mono);font-size:1.4rem;font-weight:700;color:'+semaforoCor+';">'+n+'</span>'
-      +'<span style="font-size:0.55rem;color:var(--dim2);">ocorr\xeancia'+(n>1?'s':'')+' encontrada'+(n>1?'s':'')+'</span>'
-      +'</div>'
-      +'<div style="font-size:0.48rem;color:var(--dim2);">'+pct.toFixed(2)+'% das janelas \u00b7 IC 95%: '+intervalo+'</div>'
-      +'</div>'
-      +'</div>'
-
-      // Descricao do semaforo
-      +'<div style="background:'+semaforoCor+'11;border-radius:6px;padding:6px 8px;font-size:0.5rem;color:var(--text);line-height:1.5;">'+semaforoDesc+'</div>'
-
-      // Barra de confianca visual
-      +'<div style="margin-top:8px;">'
-      +'<div style="display:flex;justify-content:space-between;font-size:0.42rem;color:var(--dim2);margin-bottom:3px;"><span>0%</span><span>Intervalo de Confian\xe7a 95%</span><span>100%</span></div>'
-      +'<div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;position:relative;">'
-      +'<div style="position:absolute;left:'+low.toFixed(1)+'%;width:'+(high-low).toFixed(1)+'%;height:100%;background:'+semaforoCor+';border-radius:5px;opacity:0.8;"></div>'
-      +'<div style="position:absolute;left:'+pct.toFixed(1)+'%;width:2px;height:100%;background:white;transform:translateX(-50%);"></div>'
-      +'</div>'
-      +'</div>'
-      +'</div>';
-
-    // Ultimas ocorrencias
-    html += '<div style="font-size:0.46rem;color:var(--dim2);letter-spacing:0.08em;margin-bottom:6px;margin-top:4px;">ÚLTIMAS OCORR\xcaNcias</div>';
-    const ultimas = matches.slice(-10).reverse();
-    html += ultimas.map(function(seq){
-      const horaInicio = seq[0].hora;
-      const horaFim = seq[seq.length-1].hora;
-      const itens = seq.map(function(ev){
-        const tipoNome = {T:'\ud83d\udfe2T',Q:'\ud83d\udfe1Q',D:'\ud83d\udfead'};
-        const corIcon = ev.corOriginal ? ({vermelho:'\ud83d\udd34',azul:'\ud83d\udd35',verde:'\ud83d\udfe2'}[ev.corOriginal]||'') : '';
-        return corIcon+(tipoNome[ev.tipo]||'?')+(ev.num?ev.num:'');
-      }).join(' \u2192 ');
-      return '<div style="display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--card2);border-radius:7px;margin-bottom:3px;font-size:0.5rem;">'
-        +'<span style="font-family:var(--font-mono);color:var(--dim2);min-width:70px;">'+horaInicio+'-'+horaFim+'</span>'
-        +'<span style="color:var(--text);">'+itens+'</span>'
-        +'</div>';
-    }).join('');
-
-    html += '<div style="margin-top:8px;font-size:0.46rem;color:var(--dim2);line-height:1.6;background:#080608;border-radius:7px;padding:7px 9px;">'
-      +'\ud83d\udca1 Isto \xe9 uma contagem hist\xf3rica, n\xe3o uma previs\xe3o. Cada rodada futura tem a mesma probabilidade independentemente deste padr\xe3o j\xe1 ter ocorrido.'
-      +'</div>';
-
-    el.innerHTML = html;
-  }
-
-  // Expor publicamente para chamadas externas (ex: ao trocar de aba)
-  window.cpRenderPassosPublic = cpRenderPassos;
-
-  // Inicializa a UI ao carregar
-  document.addEventListener('DOMContentLoaded', function(){
-    cpRenderPassos();
-  });
-  // Tambem renderiza imediatamente caso o DOM ja esteja pronto (script no fim do body)
-  if(document.getElementById('cp-passos')) cpRenderPassos();
-})();
-
-// =====================================
-//  BIBLIOTECA DE PADROES
-// =====================================
-(function(){
-  // Carregar biblioteca do localStorage
-  function loadBiblioteca(){
-    try{ return JSON.parse(localStorage.getItem('pro_cp_biblioteca')||'[]'); }
-    catch(e){ return []; }
-  }
-  function saveBiblioteca(lib){
-    localStorage.setItem('pro_cp_biblioteca', JSON.stringify(lib));
-  }
-
-  window.cpGuardarPadrao = function(){
-    if(!CP.passos||!CP.passos.length){ showToast('Define um padr\xe3o primeiro!','warn'); return; }
-    const nome = prompt('Nome para este padr\xe3o:', 'Padr\xe3o '+(loadBiblioteca().length+1));
-    if(!nome) return;
-    const lib = loadBiblioteca();
-    // Se ja existe com este nome, sobrescreve
-    const idx = lib.findIndex(function(p){return p.nome===nome;});
-    const entry = { nome, passos: JSON.parse(JSON.stringify(CP.passos)), criadoEm: Date.now(), historico:[] };
-    if(idx>=0) lib[idx]=entry; else lib.push(entry);
-    saveBiblioteca(lib);
-    cpRenderBiblioteca();
-    showToast('\ud83d\udcbe Padr\xe3o "'+nome+'" guardado!','success');
-  };
-
-  window.cpRenderBiblioteca = function(){
-    const el = document.getElementById('cp-biblioteca');
-    if(!el) return;
-    const lib = loadBiblioteca();
-    if(!lib.length){
-      el.innerHTML='<div style="font-size:0.52rem;color:var(--dim2);padding:4px;">Nenhum padr\xe3o guardado ainda. Cria um padr\xe3o e clica em \ud83d\udcbe Guardar.</div>';
-      return;
-    }
-
-    const tipoNome = {qualquer:'Qq',triplo:'\ud83d\udfe2T',quadra:'\ud83d\udfe1Q',duplo:'\ud83d\udfead'};
-    const tipoCor = {qualquer:'var(--dim2)',triplo:'#4ade80',quadra:'#fbbf24',duplo:'#c084fc'};
-
-    el.innerHTML = lib.map(function(p, i){
-      const label = p.passos.map(function(ps){
-        const t=tipoNome[ps.tipo]||'?';
-        const n=ps.num?' '+ps.num:'';
-        const c=ps.cor?({vermelho:'\ud83d\udd34',azul:'\ud83d\udd35',verde:'\ud83d\udfe2'}[ps.cor]||''):'';
-        return c+t+n;
-      }).join(' \u2192 ');
-
-      // Ultimo resultado se existir
-      const ultimo = p.historico && p.historico.length ? p.historico[p.historico.length-1] : null;
-      const semaforoIcon = ultimo ? (ultimo.n>=30?'\ud83d\udfe2':ultimo.n>=10?'\ud83d\udfe1':'\ud83d\udd34') : '';
-
-      return '<div style="background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;margin-bottom:6px;">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
-        +'<div style="font-size:0.55rem;font-weight:700;color:#a5b4fc;">'+p.nome+'</div>'
-        +'<div style="display:flex;gap:4px;">'
-        +'<button onclick="cpCarregarPadrao('+i+')" style="font-size:0.46rem;padding:3px 7px;border-radius:5px;background:#1a1a30;border:1px solid #4a4a8a;color:#a5b4fc;cursor:pointer;">\u21a9 Carregar</button>'
-        +'<button onclick="cpPesquisarPadrao('+i+')" style="font-size:0.46rem;padding:3px 7px;border-radius:5px;background:linear-gradient(135deg,#2a0a1a,#f472b633);border:1px solid #f472b644;color:#f472b6;cursor:pointer;">\ud83d\udd0d</button>'
-        +'<button onclick="cpApagarPadrao('+i+')" style="font-size:0.46rem;padding:3px 7px;border-radius:5px;background:#1a0505;border:1px solid #4a1a1a;color:var(--red);cursor:pointer;">\u00d7</button>'
-        +'</div>'
-        +'</div>'
-        +'<div style="font-size:0.5rem;color:var(--dim2);">'+label+'</div>'
-        +(ultimo?'<div style="font-size:0.46rem;color:var(--dim2);margin-top:4px;">'+semaforoIcon+' Ultima pesquisa: '+ultimo.n+' ocorr\xeancias ('+ultimo.pct.toFixed(1)+'%) \u2014 '+new Date(ultimo.ts).toLocaleDateString('pt-PT')+'</div>':'')
-        +'</div>';
-    }).join('');
-
-    // Botao de comparar (so aparece com 2+ padroes)
-    if(lib.length>=2){
-      el.innerHTML += '<button onclick="cpCompararTodos()" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;background:#0a0a20;border:1px solid #4a4a8a;color:#a5b4fc;font-size:0.52rem;font-weight:700;cursor:pointer;">\u2194\ufe0f Comparar todos os padr\xf5es</button>';
-    }
-  };
-
-  window.cpCarregarPadrao = function(i){
-    const lib = loadBiblioteca();
-    if(!lib[i]) return;
-    CP.passos = JSON.parse(JSON.stringify(lib[i].passos));
-    CP.editando = 0;
-    cpRenderPassosPublic();
-    document.getElementById('cp-editor').style.display='none';
-    showToast('Padr\xe3o "'+lib[i].nome+'" carregado!','success');
-  };
-
-  window.cpPesquisarPadrao = function(i){
-    cpCarregarPadrao(i);
-    // Pesquisa e guarda resultado no historico
-    const events = buildTimeline();
-    const chrono = events.filter(function(e){return e.hora;}).slice().reverse();
-    const n = CP.passos.length;
-    let matches = 0;
-    for(let j=0; j<=chrono.length-n; j++){
-      let ok=true;
-      for(let k=0;k<n;k++){
-        if(!cpEventMatchesPasso(chrono[j+k], CP.passos[k])){ ok=false; break; }
-      }
-      if(ok) matches++;
-    }
-    const janelas = Math.max(1, chrono.length-n+1);
-    const pct = (matches/janelas)*100;
-
-    // Guardar no historico do padrao
-    const lib = loadBiblioteca();
-    if(!lib[i].historico) lib[i].historico=[];
-    lib[i].historico.push({n:matches, pct, ts:Date.now(), total:chrono.length});
-    if(lib[i].historico.length>30) lib[i].historico=lib[i].historico.slice(-30);
-    saveBiblioteca(lib);
-
-    cpPesquisar();
-    cpRenderBiblioteca();
-  };
-
-  window.cpApagarPadrao = function(i){
-    const lib = loadBiblioteca();
-    const nome = lib[i]?lib[i].nome:'?';
-    lib.splice(i,1);
-    saveBiblioteca(lib);
-    cpRenderBiblioteca();
-    showToast('Padr\xe3o "'+nome+'" apagado.','warn');
-  };
-
-  window.cpCompararTodos = function(){
-    const el = document.getElementById('cp-comparacao');
-    if(!el) return;
-    const lib = loadBiblioteca();
-    const events = buildTimeline();
-    const chrono = events.filter(function(e){return e.hora;}).slice().reverse();
-
-    const resultados = lib.map(function(p){
-      const n = p.passos.length;
-      let matches = 0;
-      for(let j=0; j<=chrono.length-n; j++){
-        let ok=true;
-        for(let k=0;k<n;k++){
-          if(!cpEventMatchesPasso(chrono[j+k], p.passos[k])){ ok=false; break; }
-        }
-        if(ok) matches++;
-      }
-      const janelas = Math.max(1, chrono.length-n+1);
-      const pct = matches/janelas*100;
-      const semaforo = matches>=30?'\ud83d\udfe2':matches>=10?'\ud83d\udfe1':'\ud83d\udd34';
-      return { nome:p.nome, matches, pct, semaforo };
-    }).sort(function(a,b){
-      // Ordenar: primeiro por semaforo (verde>amarelo>vermelho), depois por pct
-      const order = {'\ud83d\udfe2':3,'\ud83d\udfe1':2,'\ud83d\udd34':1};
-      const diff = (order[b.semaforo]||0)-(order[a.semaforo]||0);
-      return diff!==0?diff:b.pct-a.pct;
-    });
-
-    el.style.display='block';
-    el.innerHTML = '<div style="font-size:0.48rem;color:#a5b4fc;font-weight:700;letter-spacing:0.08em;margin-bottom:8px;">\u2194\ufe0f COMPARA\u00c7\u00c3O DE PADR\u00d5ES</div>'
-      + resultados.map(function(r,rank){
-        const maxPct = resultados[0].pct||1;
-        const barW = Math.round((r.pct/maxPct)*100);
-        return '<div style="margin-bottom:6px;">'
-          +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">'
-          +'<span style="font-size:0.6rem;">'+r.semaforo+'</span>'
-          +'<span style="font-size:0.52rem;color:var(--text);font-weight:600;">'+r.nome+'</span>'
-          +'<span style="margin-left:auto;font-family:var(--font-mono);font-size:0.52rem;color:var(--dim2);">'+r.matches+'x &middot; '+r.pct.toFixed(1)+'%</span>'
-          +'</div>'
-          +'<div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;">'
-          +'<div style="width:'+barW+'%;height:100%;background:'+(r.semaforo==='\ud83d\udfe2'?'#4ade80':r.semaforo==='\ud83d\udfe1'?'#fbbf24':'#ef4444')+';border-radius:5px;"></div>'
-          +'</div>'
-          +'</div>';
-      }).join('');
-  };
-
-  // Inicializar ao carregar
-  document.addEventListener('DOMContentLoaded', function(){
-    cpRenderBiblioteca();
-  });
-  if(document.getElementById('cp-biblioteca')) cpRenderBiblioteca();
-})();
 
 
 
@@ -12054,93 +11156,6 @@ function renderStreaks(){
     : '<div class="empty">Nenhum padrão especial detetado.</div>';
 }
 
-function renderIntervalosDist(){
-  const arr = S.triplos;
-  const c = document.getElementById('intervalo-bars');
-  const s = document.getElementById('intervalo-stats');
-  if(!c||!s) return;
-
-  const ivs = arr.filter(t=>t.interval!=null&&t.interval>0&&t.interval<60).map(t=>t.interval);
-  if(ivs.length<3){ c.innerHTML='<div class="empty">Precisa de mais dados.</div>'; return; }
-
-  // Buckets: 1, 2, 3, 4, 5, 6-10, 11-20, 21+
-  const buckets = [
-    {label:'1m', min:0, max:1},
-    {label:'2m', min:2, max:2},
-    {label:'3m', min:3, max:3},
-    {label:'4m', min:4, max:4},
-    {label:'5m', min:5, max:5},
-    {label:'6-10m', min:6, max:10},
-    {label:'11-20m', min:11, max:20},
-    {label:'21+m', min:21, max:999},
-  ];
-
-  buckets.forEach(b=>{ b.count = ivs.filter(v=>v>=b.min&&v<=b.max).length; });
-  const maxCount = Math.max(...buckets.map(b=>b.count),1);
-
-  c.innerHTML = buckets.map(b=>{
-    const pct = Math.round((b.count/maxCount)*100);
-    const color = b.min<=2?'var(--red)':b.min<=5?'var(--orange)':b.min<=10?'var(--gold)':'var(--blue)';
-    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-      <div style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);min-width:36px;text-align:right;">${b.label}</div>
-      <div style="flex:1;background:var(--border);border-radius:3px;height:14px;overflow:hidden;">
-        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width 0.4s;display:flex;align-items:center;padding-left:4px;">
-          ${b.count>0?`<span style="font-size:0.42rem;color:white;font-weight:700;">${b.count}</span>`:''}
-        </div>
-      </div>
-      <div style="font-size:0.46rem;color:var(--dim2);min-width:24px;">${b.count>0?Math.round((b.count/ivs.length)*100)+'%':''}</div>
-    </div>`;
-  }).join('');
-
-  const avg = (ivs.reduce((a,b)=>a+b,0)/ivs.length).toFixed(1);
-  const min = Math.min(...ivs);
-  const max = Math.max(...ivs);
-  const mediana = [...ivs].sort((a,b)=>a-b)[Math.floor(ivs.length/2)];
-
-  s.innerHTML = [
-    {l:'Média',v:avg+'m',c:'var(--green)'},
-    {l:'Mínimo',v:min+'m',c:'var(--red)'},
-    {l:'Máximo',v:max+'m',c:'var(--blue)'},
-    {l:'Mediana',v:mediana+'m',c:'var(--gold)'},
-    {l:'Total',v:ivs.length,c:'var(--text)'},
-    {l:'Rajadas',v:ivs.filter(v=>v<=2).length,c:'var(--orange)'},
-  ].map(i=>`
-    <div class="sbox">
-      <div class="sv" style="color:${i.c};font-size:0.9rem;">${i.v}</div>
-      <div class="sl">${i.l}</div>
-    </div>`).join('');
-
-  // Previsão de confiança: prob. de sair o próximo triplo nos próximos X min
-  const p = document.getElementById('intervalo-previsao');
-  if(p){
-    const agora = new Date();
-    const agoraMin = agora.getHours()*60+agora.getMinutes();
-    const ultimo = arr[0];
-    const tempoPassado = (ultimo&&ultimo.hora) ? Math.max(0,agoraMin-toMin(ultimo.hora)) : null;
-    if(tempoPassado!==null){
-      const janelas = [5,10,15,20];
-      p.innerHTML = '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">'
-        +'<div style="font-size:0.46rem;color:var(--dim2);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">PREVISÃO DE CONFIANÇA</div>'
-        +'<div style="font-size:0.48rem;color:var(--dim2);margin-bottom:6px;">Já passaram <b style="color:var(--text);">'+tempoPassado+'min</b> desde o último triplo (média: '+avg+'min)</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">'
-        +janelas.map(function(j){
-          const limite = tempoPassado+j;
-          const prob = Math.round((ivs.filter(function(v){return v<=limite;}).length/ivs.length)*100);
-          const cor = prob>=70?'#ef4444':prob>=40?'#fbbf24':'#4ade80';
-          return '<div style="background:'+cor+'11;border:1px solid '+cor+'33;border-radius:8px;padding:6px;text-align:center;">'
-            +'<div style="font-family:var(--font-mono);font-size:0.8rem;font-weight:700;color:'+cor+';">'+prob+'%</div>'
-            +'<div style="font-size:0.4rem;color:var(--dim2);">nos prox.</div>'
-            +'<div style="font-size:0.46rem;color:var(--dim2);">'+j+'min</div>'
-            +'</div>';
-        }).join('')
-        +'</div>'
-        +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:5px;line-height:1.5;">⚠️ Baseado na distribuição histórica dos teus '+ivs.length+' intervalos. Não é uma garantia.</div>'
-        +'</div>';
-    } else {
-      p.innerHTML = '';
-    }
-  }
-}
 
 // ══════════════════════════════════════════════
 //  IA PREDITIVA
@@ -14837,52 +13852,6 @@ renderTQScore = function(){
 
 
 // ─── FASE 3: ANTI-STREAKS (ausencia por numero) ──────
-function renderAntiStreaks(){
-  const el = document.getElementById('pad-anti-streaks');
-  if(!el) return;
-  if(S.triplos.length<5){ el.innerHTML='<div class="empty">Sem dados suficientes.</div>'; return; }
-
-  // Para cada numero 1-6, contar quantos triplos passaram desde a ultima aparicao
-  const ausencias = {};
-  for(let n=1;n<=6;n++) ausencias[n]=0;
-  let encontrado = {1:false,2:false,3:false,4:false,5:false,6:false};
-
-  for(let i=0;i<S.triplos.length;i++){
-    const t = S.triplos[i];
-    if(t.num>=1&&t.num<=6){
-      if(!encontrado[t.num]) ausencias[t.num]=i;
-      encontrado[t.num]=true;
-    }
-  }
-
-  // Calcular media de ausencia "normal"
-  const totalTriplos = S.triplos.length;
-  const freqEsperada = totalTriplos/6; // cada numero devia aparecer 1/6 das vezes
-  const numColors = ['','#ef4444','#f97316','#fbbf24','#4ade80','#38bdf8','#c084fc'];
-
-  const sorted = [1,2,3,4,5,6].sort(function(a,b){return ausencias[b]-ausencias[a];});
-
-  el.innerHTML = '<div style="font-size:0.46rem;color:var(--dim2);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">AUS\xcaNIA POR N\xdaMERO (triplos desde a ult. apari\xe7\xe3o)</div>'
-    +'<div style="display:flex;flex-direction:column;gap:4px;">'
-    +sorted.map(function(n){
-      const aus = ausencias[n];
-      const ratio = aus/Math.max(1,freqEsperada);
-      const cor = ratio>=2?'#ef4444':ratio>=1.2?'#fbbf24':'#4ade80';
-      const label = ratio>=2?'\ud83d\udd34 Muito ausente':ratio>=1.2?'\ud83d\udfe1 Abaixo do esperado':'\ud83d\udfe2 Normal';
-      const pct = Math.min(100,Math.round((aus/Math.max(1,totalTriplos))*100*6));
-      return '<div style="display:flex;align-items:center;gap:7px;padding:5px 7px;background:'+cor+'0a;border:1px solid '+cor+'22;border-radius:8px;">'
-        +'<span style="font-family:var(--font-mono);font-size:0.8rem;font-weight:700;color:'+numColors[n]+';min-width:18px;">'+n+'</span>'
-        +'<div style="flex:1;">'
-        +'<div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;">'
-        +'<div style="width:'+pct+'%;height:100%;background:'+cor+';border-radius:5px;"></div>'
-        +'</div>'
-        +'</div>'
-        +'<span style="font-size:0.46rem;color:'+cor+';min-width:80px;text-align:right;">'+aus+' triplos \xb7 '+label+'</span>'
-        +'</div>';
-    }).join('')
-    +'</div>'
-    +'<div style="margin-top:6px;font-size:0.42rem;color:var(--dim2);line-height:1.5;">\u26a0\ufe0f A aus\xeancia prolongada n\xe3o aumenta a probabilidade futura \u2014 cada rodada \xe9 independente. Use como curiosidade, n\xe3o como sinal de aposta.</div>';
-}
 
 // ─── FASE 4: ALERTAS DE TRANSICAO QUENTE/FRIO ────────
 (function(){
@@ -15242,108 +14211,6 @@ function cpRenderDepth(){
 }
 
 // ─── SUGESTAO AUTOMATICA ──────────────────────────────
-window.cpSugerirPadroes = function(){
-  const el = document.getElementById('cp-sugestoes');
-  if(!el) return;
-  const events = buildTimeline();
-  const chrono = events.filter(function(e){return e.hora;}).slice().reverse();
-  if(chrono.length<10){
-    el.innerHTML='<div class="empty">Precisa de 10+ eventos para gerar sugest\xf5es.</div>';
-    return;
-  }
-
-  // Analisar todos os pares e triplos de eventos consecutivos
-  const pares = {};
-  const triplos_seq = {};
-  for(let i=0;i<chrono.length-1;i++){
-    const k1 = chrono[i].tipo+(chrono[i].num||'');
-    const k2 = chrono[i+1].tipo+(chrono[i+1].num||'');
-    const kPar = k1+'->'+k2;
-    pares[kPar]=(pares[kPar]||0)+1;
-    if(i<chrono.length-2){
-      const k3 = chrono[i+2].tipo+(chrono[i+2].num||'');
-      const kTri = k1+'->'+k2+'->'+k3;
-      triplos_seq[kTri]=(triplos_seq[kTri]||0)+1;
-    }
-  }
-
-  // Top 5 pares e top 3 triplos mais frequentes
-  const topPares = Object.entries(pares).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-  const topTriplos = Object.entries(triplos_seq).sort(function(a,b){return b[1]-a[1];}).slice(0,3);
-
-  function parseKey(k){
-    const tipoNome={T:'\ud83d\udfe2 Triplo',Q:'\ud83d\udfe1 Quadra',D:'\ud83d\udfea Duplo'};
-    return k.replace(/([TQD])(\d?)/g,function(m,t,n){ return (tipoNome[t]||t)+(n?' '+n:''); });
-  }
-
-  const total = chrono.length;
-  el.innerHTML = '<div style="font-size:0.48rem;color:#f472b6;font-weight:700;letter-spacing:0.08em;margin-bottom:8px;">\u2728 PADR\xd5ES MAIS FREQUENTES NO TEU HIST\xd3RICO</div>'
-
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em;">Sequ\xeancias de 2</div>'
-    +topPares.map(function(pair){
-      const pct=Math.round((pair[1]/(total-1))*100);
-      const semaforo=pair[1]>=30?'\ud83d\udfe2':pair[1]>=10?'\ud83d\udfe1':'\ud83d\udd34';
-      return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--card2);border-radius:7px;margin-bottom:4px;">'
-        +'<span style="font-size:0.6rem;">'+semaforo+'</span>'
-        +'<span style="font-size:0.5rem;color:var(--text);flex:1;cursor:pointer;" onclick="cpCarregarSugestao(\''+pair[0]+'\')">'+parseKey(pair[0])+'</span>'
-        +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);">'+pair[1]+'x \xb7 '+pct+'%</span>'
-        +'<button onclick="cpGuardarSugestaoRapida(\''+pair[0]+'\')" style="font-size:0.5rem;padding:2px 7px;border-radius:5px;background:#1a1a30;border:1px solid #4a4a8a;color:#a5b4fc;cursor:pointer;flex-shrink:0;" title="Guardar na Biblioteca">\ud83d\udcbe</button>'
-        +'</div>';
-    }).join('')
-
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin:8px 0 5px;text-transform:uppercase;letter-spacing:0.08em;">Sequ\xeancias de 3</div>'
-    +topTriplos.map(function(pair){
-      const pct=Math.round((pair[1]/(total-2))*100);
-      const semaforo=pair[1]>=15?'\ud83d\udfe2':pair[1]>=5?'\ud83d\udfe1':'\ud83d\udd34';
-      return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--card2);border-radius:7px;margin-bottom:4px;">'
-        +'<span style="font-size:0.6rem;">'+semaforo+'</span>'
-        +'<span style="font-size:0.5rem;color:var(--text);flex:1;cursor:pointer;" onclick="cpCarregarSugestao(\''+pair[0]+'\')">'+parseKey(pair[0])+'</span>'
-        +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);">'+pair[1]+'x \xb7 '+pct+'%</span>'
-        +'<button onclick="cpGuardarSugestaoRapida(\''+pair[0]+'\')" style="font-size:0.5rem;padding:2px 7px;border-radius:5px;background:#1a1a30;border:1px solid #4a4a8a;color:#a5b4fc;cursor:pointer;flex-shrink:0;" title="Guardar na Biblioteca">\ud83d\udcbe</button>'
-        +'</div>';
-    }).join('')
-    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">Toca no texto para carregar no Construtor · '+'\ud83d\udcbe'+' guarda direto na Biblioteca</div>';
-};
-
-window.cpGuardarSugestaoRapida = function(key){
-  window.cpCarregarSugestao(key);
-  let lib = [];
-  try{ lib = JSON.parse(localStorage.getItem('pro_cp_biblioteca')||'[]'); }catch(e){ lib=[]; }
-  const nomeLabel = key.split('->').map(function(p){
-    const t=p[0]==='T'?'\ud83d\udfe2T':p[0]==='Q'?'\ud83d\udfe1Q':p[0]==='D'?'\ud83d\udfeaD':'?';
-    const n=p.length>1&&p[1]?p[1]:'';
-    return t+n;
-  }).join('\u2192');
-  const nome = 'Sugest\xe3o: '+nomeLabel;
-  const idx = lib.findIndex(function(p){return p.nome===nome;});
-  const entry = { nome, passos: JSON.parse(JSON.stringify(window.CP.passos)), criadoEm: Date.now(), historico:[] };
-  if(idx>=0) lib[idx]=entry; else lib.push(entry);
-  try{ localStorage.setItem('pro_cp_biblioteca', JSON.stringify(lib)); }catch(e){}
-  if(typeof window.cpRenderBiblioteca==='function') window.cpRenderBiblioteca();
-  showToast('\ud83d\udcbe Guardado na Biblioteca!','success');
-};
-
-window.cpCarregarSugestao = function(key){
-  const partes = key.split('->');
-  CP.passos = partes.map(function(p){
-    const tipo = p[0]==='T'?'triplo':p[0]==='Q'?'quadra':p[0]==='D'?'duplo':'qualquer';
-    const num = p.length>1&&p[1]?parseInt(p[1]):null;
-    return {tipo, num, cor:null, gap:0};
-  });
-  CP.editando = 0;
-  if(typeof cpRenderPassosPublic==='function') cpRenderPassosPublic();
-  document.getElementById('cp-editor').style.display='none';
-  showToast('Padr\xe3o sugerido carregado! Clica em \ud83d\udd0d para pesquisar.','success');
-};
-
-// Inicializar sugestoes quando a aba Profunda e aberta
-const _origSwitchAnalise = window.switchAnalise;
-window.switchAnalise = function(tab, btn){
-  _origSwitchAnalise(tab, btn);
-  if(tab==='profunda'){
-    setTimeout(function(){ if(typeof cpSugerirPadroes==='function') cpSugerirPadroes(); }, 200);
-  }
-};
 
 
 
