@@ -612,6 +612,24 @@ textarea:focus{border-color:var(--green)!important;}
   <!-- BOTAO DE EMERGENCIA - SILENCIO TOTAL -->
   <button data-essencial="1" onclick="silencioTotal()" style="width:100%;padding:11px;margin-bottom:10px;border-radius:12px;background:#2a0a0a;border:2px solid #ef4444;color:#ef4444;font-size:0.6rem;font-weight:700;cursor:pointer;">🔇 SILÊNCIO TOTAL (corta tudo agora)</button>
 
+  <!-- BOLETIM DO DIA -->
+  <div class="card" id="sec-boletim-dia" style="margin-bottom:10px;">
+    <div class="ch">
+      <div class="ci" style="background:#0a1410;">📋</div>
+      <div><div class="ct">Boletim do Dia</div><div class="cs">Resumo de ontem — sniper, horas fortes e repetição</div></div>
+    </div>
+    <div id="dash-boletim-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+  </div>
+
+  <!-- BOLETIM SEMANAL -->
+  <div class="card" id="sec-boletim-semana" style="margin-bottom:10px;">
+    <div class="ch">
+      <div class="ci" style="background:#0a1020;">📊</div>
+      <div><div class="ct">Boletim da Semana</div><div class="cs">Resumo semanal + deteção de mudança de hora forte</div></div>
+    </div>
+    <div id="dash-boletim-semana-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+  </div>
+
   <!-- CENTRAL DE PREPARACAO -->
   <div class="card" id="card-central-preparacao" data-essencial="1" style="border-color:#3a1a4a;margin-bottom:10px;background:linear-gradient(135deg,#12081a,#0e0614);">
     <div class="ch" style="border-color:#3a1a4a;">
@@ -789,24 +807,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--green);">Minutos Quentes Agora</div><div class="cs" id="dash-mq-sub">Baseado no histórico desta hora</div></div>
     </div>
     <div id="dash-minutos-quentes" style="padding:4px 0;"></div>
-  </div>
-
-  <!-- BOLETIM DO DIA -->
-  <div class="card" id="sec-boletim-dia" style="margin-bottom:10px;display:none;">
-    <div class="ch">
-      <div class="ci" style="background:#0a1410;">📋</div>
-      <div><div class="ct">Boletim do Dia</div><div class="cs">Resumo de ontem — sniper, horas fortes e repetição</div></div>
-    </div>
-    <div id="dash-boletim-conteudo" style="padding:10px;"></div>
-  </div>
-
-  <!-- BOLETIM SEMANAL -->
-  <div class="card" id="sec-boletim-semana" style="margin-bottom:10px;">
-    <div class="ch">
-      <div class="ci" style="background:#0a1020;">📊</div>
-      <div><div class="ct">Boletim da Semana</div><div class="cs">Resumo semanal + deteção de mudança de hora forte</div></div>
-    </div>
-    <div id="dash-boletim-semana-conteudo" style="padding:10px;"></div>
   </div>
 
   <!-- GRÁFICO DE LINHA ANIMADO — TRIPLOS HOJE -->
