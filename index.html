@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-126</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-128</div>
   </div>
 
   <!-- Display PIN -->
@@ -628,6 +628,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct">Boletim da Semana</div><div class="cs">Resumo semanal + deteção de mudança de hora forte</div></div>
     </div>
     <div id="dash-boletim-semana-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+  </div>
+
+  <!-- BOLETIM MENSAL -->
+  <div class="card" id="sec-boletim-mes" data-essencial="1" style="margin-bottom:10px;">
+    <div class="ch">
+      <div class="ci" style="background:#1a0a1a;">🗓️</div>
+      <div><div class="ct">Boletim do Mês</div><div class="cs">Nota média mensal + deriva da hora forte mês a mês</div></div>
+    </div>
+    <div id="dash-boletim-mes-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
   </div>
 
   <!-- CENTRAL DE PREPARACAO -->
@@ -8661,6 +8670,7 @@ function renderDashboard(){
   safeRun(renderProximaHoraForteTriplo,'renderProximaHoraForteTriplo');
   safeRun(renderBoletimDia,'renderBoletimDia');
   safeRun(renderBoletimSemana,'renderBoletimSemana');
+  safeRun(renderBoletimMes,'renderBoletimMes');
   safeRun(applyModoEssencial,'applyModoEssencial');
   safeRun(syncTurnoPills,'syncTurnoPills');
 
@@ -14775,6 +14785,20 @@ function calcularBoletimDia(offsetDias){
   for(let i=1;i<triplosDia.length;i++){ if(triplosDia[i].num===triplosDia[i-1].num) repeticoes++; }
   const repPct = triplosDia.length>1 ? Math.round(100*repeticoes/(triplosDia.length-1)) : null;
 
+  // Destaque do dia: melhor e pior hora, por contagem de triplos hoje
+  const porHoraHoje = {};
+  triplosDia.forEach(function(t){ const h=parseInt(t.hora.split(':')[0]); porHoraHoje[h]=(porHoraHoje[h]||0)+1; });
+  let melhorHora=null, melhorN=-1, piorHora=null, piorN=Infinity;
+  Object.keys(porHoraHoje).forEach(function(h){
+    const n = porHoraHoje[h];
+    if(n>melhorN){ melhorN=n; melhorHora=parseInt(h); }
+  });
+  // pior hora: entre as que qualificam como "fortes" (horasOk+horasQuebra), a que teve menos hoje
+  [].concat(horasOk, horasQuebra).forEach(function(x){
+    if(x.contagem<piorN){ piorN=x.contagem; piorHora=x.h; }
+  });
+  if(piorHora===null) piorN=null;
+
   let pontos=0, maxPontos=0;
   if(sniperPct!==null){ maxPontos+=40; pontos += sniperPct>=15?40:sniperPct>=8?25:10; }
   if(horasOk.length+horasQuebra.length>0){ maxPontos+=40; pontos += Math.round(40*horasOk.length/(horasOk.length+horasQuebra.length)); }
@@ -14783,7 +14807,8 @@ function calcularBoletimDia(offsetDias){
   const nota = notaPct===null?'—':notaPct>=85?'A':notaPct>=70?'B+':notaPct>=55?'B':notaPct>=40?'C':'D';
 
   return {diaRef:diaRef.getTime(), sniperPct:sniperPct, callsDia:callsDia.length, acertosDia:acertosDia,
-    horasOk:horasOk, horasQuebra:horasQuebra, repPct:repPct, nota:nota, notaPct:notaPct, triplosDia:triplosDia.length};
+    horasOk:horasOk, horasQuebra:horasQuebra, repPct:repPct, repCount:repeticoes, nota:nota, notaPct:notaPct,
+    triplosDia:triplosDia.length, melhorHora:melhorHora, melhorN:melhorN<0?null:melhorN, piorHora:piorHora, piorN:piorN};
 }
 
 function checkBoletimDiario(){
@@ -14796,6 +14821,14 @@ function checkBoletimDiario(){
   localStorage.setItem(chave,'1');
   const b = calcularBoletimDia(1);
   localStorage.setItem('pro_boletim_ultimo', JSON.stringify(b));
+  // Histórico de notas (últimos 30 dias) para o mini-gráfico
+  try{
+    let hist = JSON.parse(localStorage.getItem('pro_boletim_historico')||'[]');
+    hist = hist.filter(function(h){ return h.diaRef!==b.diaRef; }).concat([{diaRef:b.diaRef, notaPct:b.notaPct}]);
+    hist.sort(function(a,c){ return a.diaRef-c.diaRef; });
+    if(hist.length>30) hist = hist.slice(hist.length-30);
+    localStorage.setItem('pro_boletim_historico', JSON.stringify(hist));
+  }catch(e){}
   if(typeof Notification!=='undefined' && Notification.permission==='granted'){
     let corpo = '';
     if(b.sniperPct!==null) corpo += '\ud83c\udfaf Sniper: '+b.acertosDia+'/'+b.callsDia+' ('+b.sniperPct+'%). ';
@@ -14807,6 +14840,20 @@ function checkBoletimDiario(){
   if(typeof renderBoletimDia==='function') renderBoletimDia();
 }
 
+function _sparklineNotas(hist){
+  if(!hist || hist.length<2) return '';
+  const w = 4, gap = 2;
+  const totalW = hist.length*(w+gap);
+  let bars = '';
+  hist.forEach(function(h, i){
+    const v = h.notaPct;
+    const alt = v===null ? 2 : Math.max(2, Math.round(v/100*26));
+    const cor = v===null ? '#2a2a2a' : v>=70?'#4ade80':v>=40?'#fbbf24':'#ef4444';
+    bars += '<rect x="'+(i*(w+gap))+'" y="'+(28-alt)+'" width="'+w+'" height="'+alt+'" rx="1" fill="'+cor+'"></rect>';
+  });
+  return '<svg viewBox="0 0 '+totalW+' 30" style="width:100%;height:30px;margin-top:6px;">'+bars+'</svg>';
+}
+
 function renderBoletimDia(){
   const sec = document.getElementById('sec-boletim-dia');
   const el = document.getElementById('dash-boletim-conteudo');
@@ -14814,6 +14861,9 @@ function renderBoletimDia(){
   sec.style.display='block';
   let b = null;
   try{ b = JSON.parse(localStorage.getItem('pro_boletim_ultimo')||'null'); }catch(e){}
+  // Se o boletim guardado for de uma versão antiga (sem os campos novos, ex:
+  // melhorHora/repCount), recalcula em vez de mostrar "undefined" nesses campos.
+  if(b && (b.melhorHora===undefined || b.repCount===undefined)) b = null;
   if(!b) b = calcularBoletimDia(1);
   if(!b || (b.callsDia===0 && b.triplosDia===0)){
     el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">📭 Ainda sem dados suficientes de ontem para gerar o boletim. Assim que registares o dia, aparece aqui sozinho.</div>';
@@ -14821,7 +14871,19 @@ function renderBoletimDia(){
   }
   const dataTxt = new Date(b.diaRef).toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
   const corNota = b.notaPct===null?'var(--dim2)':b.notaPct>=70?'var(--green)':b.notaPct>=40?'#fbbf24':'#ef4444';
-  let html = '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
+
+  const anteontem = calcularBoletimDia(2);
+  const mudancas = [];
+  if(b.sniperPct!==null && anteontem.sniperPct!==null){
+    const diff = b.sniperPct - anteontem.sniperPct;
+    if(Math.abs(diff)>=5) mudancas.push((diff>0?'\ud83d\udcc8 Sniper melhorou +':'\ud83d\udcc9 Sniper caiu ')+Math.abs(diff)+'% desde ontem');
+  }
+  if(b.melhorHora!==null && anteontem.melhorHora!==null && b.melhorHora!==anteontem.melhorHora){
+    mudancas.push('\ud83d\udd04 Melhor hora mudou: '+pad(anteontem.melhorHora)+'h \u2192 '+pad(b.melhorHora)+'h');
+  }
+  let html = mudancas.length ? '<div style="font-size:0.44rem;color:#a5b4fc;background:#0a0a18;border-radius:7px;padding:6px 8px;margin-bottom:8px;">'+mudancas.join('<br>')+'</div>' : '';
+
+  html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
     +'<div style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:2px solid '+corNota+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:'+corNota+';">'+b.nota+'</div>'
     +'<div><div style="font-size:0.5rem;color:var(--text);font-weight:700;">'+dataTxt+'</div>'
     +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosDia+' triplos registados</div></div>'
@@ -14831,8 +14893,18 @@ function renderBoletimDia(){
   html += '\ud83c\udfc6 Horas fortes: '+b.horasOk.length+' normais';
   if(b.horasQuebra.length) html += ', <span style="color:#ef4444;">'+b.horasQuebra.length+' quebrada(s) ('+b.horasQuebra.map(function(x){return pad(x.h)+'h';}).join(', ')+')</span>';
   html += '<br>';
-  if(b.repPct!==null) html += '\ud83d\udd01 Repeti\xe7\xe3o de n\xfamero: '+b.repPct+'% (normal: ~17%)<br>';
+  if(b.repPct!==null) html += '\ud83d\udd01 Repeti\xe7\xe3o de n\xfamero: '+b.repCount+'x hoje ('+b.repPct+'%, normal: ~17%)<br>';
+  if(b.melhorHora!==null) html += '\u2728 Melhor hora: '+pad(b.melhorHora)+'h ('+b.melhorN+' triplos)';
+  if(b.piorHora!==null) html += ' \u00b7 \ud83e\udd76 Pior: '+pad(b.piorHora)+'h ('+b.piorN+')';
+  if(b.melhorHora!==null || b.piorHora!==null) html += '<br>';
   html += '</div>';
+
+  try{
+    const hist = JSON.parse(localStorage.getItem('pro_boletim_historico')||'[]').slice(-14);
+    const spark = _sparklineNotas(hist);
+    if(spark) html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">\xdaltimos '+hist.length+' dias</div>'+spark;
+  }catch(e){}
+
   el.innerHTML = html;
 }
 
@@ -14939,6 +15011,111 @@ function toggleNotifBoletimSemanal(){
     return;
   }
   localStorage.setItem('pro_notif_boletim_semanal', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
+
+// ══════════════════════════════════════════════
+//  BOLETIM MENSAL — nota média do mês + deriva da hora forte mês a mês
+// ══════════════════════════════════════════════
+function _topHoraMes(arr, inicio, fim){
+  const horas = {};
+  arr.forEach(function(e){
+    if(!e.ts || !e.hora || e.imported) return;
+    if(e.ts<inicio || e.ts>=fim) return;
+    const h = parseInt(e.hora.split(':')[0]);
+    horas[h] = (horas[h]||0)+1;
+  });
+  let topH=null, topN=0;
+  Object.keys(horas).forEach(function(h){ if(horas[h]>topN){ topN=horas[h]; topH=parseInt(h); } });
+  return topH;
+}
+
+function calcularBoletimMes(offsetMeses){
+  const agora = new Date();
+  const inicio = new Date(agora.getFullYear(), agora.getMonth()-offsetMeses, 1).getTime();
+  const fim = new Date(agora.getFullYear(), agora.getMonth()-offsetMeses+1, 1).getTime();
+  const inicioAnterior = new Date(agora.getFullYear(), agora.getMonth()-offsetMeses-1, 1).getTime();
+  const hojeInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime();
+
+  const callsMes = (sniperCalls||[]).filter(function(c){ return c.ts>=inicio && c.ts<fim && c.resolved && (c.resultado==='acerto'||c.resultado==='erro'); });
+  const acertosMes = callsMes.filter(function(c){ return c.resultado==='acerto'; }).length;
+  const sniperPct = callsMes.length ? Math.round(100*acertosMes/callsMes.length) : null;
+
+  const topAtual = _topHoraMes(S.triplos, inicio, fim);
+  const topAnterior = _topHoraMes(S.triplos, inicioAnterior, inicio);
+  const mudou = (topAtual!==null && topAnterior!==null && topAtual!==topAnterior);
+
+  let somaNotas=0, nDias=0;
+  const diasNoMes = Math.round((Math.min(fim,hojeInicio)-inicio)/(24*60*60*1000));
+  for(let d=0; d<diasNoMes; d++){
+    const diaTs = inicio + d*24*60*60*1000;
+    if(diaTs >= hojeInicio) break;
+    const offsetDiasAtras = Math.round((hojeInicio-diaTs)/(24*60*60*1000));
+    const b = calcularBoletimDia(offsetDiasAtras);
+    if(b.notaPct!==null){ somaNotas += b.notaPct; nDias++; }
+  }
+  const notaMediaPct = nDias ? Math.round(somaNotas/nDias) : null;
+  const notaMedia = notaMediaPct===null?'—':notaMediaPct>=85?'A':notaMediaPct>=70?'B+':notaMediaPct>=55?'B':notaMediaPct>=40?'C':'D';
+  const triplosMes = S.triplos.filter(function(t){ return t.ts>=inicio && t.ts<fim; }).length;
+
+  return {inicio:inicio, fim:fim, sniperPct:sniperPct, callsMes:callsMes.length, acertosMes:acertosMes,
+    topAtual:topAtual, topAnterior:topAnterior, mudou:mudou, notaMedia:notaMedia, notaMediaPct:notaMediaPct,
+    triplosMes:triplosMes, nDias:nDias};
+}
+
+function checkBoletimMensal(){
+  if(localStorage.getItem('pro_notif_boletim_mensal')!=='1') return;
+  const agora = new Date();
+  if(agora.getDate()!==1 || agora.getHours()!==0 || agora.getMinutes()>10) return; // dia 1, logo apos meia-noite
+  const chave = 'pro_boletim_mensal_gerado_'+agora.getFullYear()+'-'+agora.getMonth();
+  if(localStorage.getItem(chave)==='1') return;
+  localStorage.setItem(chave,'1');
+  const b = calcularBoletimMes(1); // mes que acabou de terminar
+  localStorage.setItem('pro_boletim_mensal_ultimo', JSON.stringify(b));
+  if(typeof Notification!=='undefined' && Notification.permission==='granted'){
+    let corpo = 'Nota m\xe9dia: '+b.notaMedia+' ('+b.nDias+' dias). ';
+    if(b.sniperPct!==null) corpo += '\ud83c\udfaf Sniper: '+b.sniperPct+'%. ';
+    if(b.mudou) corpo += '\u26a0\ufe0f Hora forte mudou de m\xeas: '+pad(b.topAnterior)+'h \u2192 '+pad(b.topAtual)+'h.';
+    else if(b.topAtual!==null) corpo += '\ud83c\udfc6 Hora forte manteve-se: '+pad(b.topAtual)+'h.';
+    try{ new Notification('\ud83d\uddd3\ufe0f Boletim do M\xeas', { body: corpo, tag:'mega-sicbac-boletim-mensal' }); }catch(e){}
+  }
+  if(typeof renderBoletimMes==='function') renderBoletimMes();
+}
+
+function renderBoletimMes(){
+  const el = document.getElementById('dash-boletim-mes-conteudo');
+  if(!el) return;
+  let b = null;
+  try{ b = JSON.parse(localStorage.getItem('pro_boletim_mensal_ultimo')||'null'); }catch(e){}
+  if(!b) b = calcularBoletimMes(1);
+  if(!b || b.nDias===0){
+    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">📭 Ainda sem um mês completo de dados para o boletim mensal.</div>';
+    return;
+  }
+  const corNota = b.notaMediaPct===null?'var(--dim2)':b.notaMediaPct>=70?'var(--green)':b.notaMediaPct>=40?'#fbbf24':'#ef4444';
+  const mesTxt = new Date(b.inicio).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  let html = '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
+    +'<div style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:2px solid '+corNota+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:'+corNota+';">'+b.notaMedia+'</div>'
+    +'<div><div style="font-size:0.5rem;color:var(--text);font-weight:700;text-transform:capitalize;">'+mesTxt+'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosMes+' triplos · '+b.nDias+' dia(s) avaliado(s)</div></div>'
+    +'</div>';
+  html += '<div style="font-size:0.46rem;color:var(--text);line-height:1.9;">';
+  if(b.sniperPct!==null) html += '🎯 Sniper: '+b.acertosMes+'/'+b.callsMes+' ('+b.sniperPct+'%)<br>';
+  if(b.topAtual!==null){
+    if(b.mudou) html += '<span style="color:#fbbf24;">⚠️ Hora forte mudou de mês: '+pad(b.topAnterior)+'h → '+pad(b.topAtual)+'h</span><br>';
+    else html += '🏆 Hora forte manteve-se: '+pad(b.topAtual)+'h<br>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleNotifBoletimMensal(){
+  const atual = localStorage.getItem('pro_notif_boletim_mensal')==='1';
+  if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
+    _pedirPermissaoNotificacao(function(){ localStorage.setItem('pro_notif_boletim_mensal','1'); });
+    return;
+  }
+  localStorage.setItem('pro_notif_boletim_mensal', atual?'0':'1');
   if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
 }
 
@@ -18123,6 +18300,16 @@ function renderAlarmeQuadrasConfig(){
     +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Toda segunda, logo após a meia-noite, resume a semana que passou (nota média, precisão do Sniper) e avisa se a "hora forte" mudou em relação à semana anterior. Card no Dashboard, abaixo do Boletim do Dia. Precisa de autorizares notificações.</div>'
     +'</div>';
 
+  // Bloco 0g: Boletim Mensal
+  const notifBoletimMensalAtivo = localStorage.getItem('pro_notif_boletim_mensal')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🗓️ Boletim Mensal</span>'
+    +toggleBtn(notifBoletimMensalAtivo,'toggleNotifBoletimMensal()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">No dia 1 de cada mês, logo após a meia-noite, resume o mês anterior e avisa se a "hora forte" mudou de um mês para o outro. Card no Dashboard, abaixo do Boletim Semanal. Precisa de autorizares notificações.</div>'
+    +'</div>';
+
   // Bloco 1: Tempo sem sair
   html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
@@ -18948,6 +19135,7 @@ function verificacoesLeves(){
   safeRun(checkQuebraHoraForte,'checkQuebraHoraForte');
   safeRun(checkBoletimDiario,'checkBoletimDiario');
   safeRun(checkBoletimSemanal,'checkBoletimSemanal');
+  safeRun(checkBoletimMensal,'checkBoletimMensal');
 }
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
