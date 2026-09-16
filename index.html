@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-128</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-129</div>
   </div>
 
   <!-- Display PIN -->
@@ -14799,6 +14799,27 @@ function calcularBoletimDia(offsetDias){
   });
   if(piorHora===null) piorN=null;
 
+  // Minuto-chave: dentro de todo o dia, o minuto (0-59) que mais se repetiu nos triplos
+  const porMinutoHoje = {};
+  triplosDia.forEach(function(t){ const m=parseInt(t.hora.split(':')[1]); porMinutoHoje[m]=(porMinutoHoje[m]||0)+1; });
+  let minutoChave=null, minutoChaveN=0;
+  Object.keys(porMinutoHoje).forEach(function(m){
+    if(porMinutoHoje[m]>minutoChaveN){ minutoChaveN=porMinutoHoje[m]; minutoChave=parseInt(m); }
+  });
+  if(minutoChaveN<2){ minutoChave=null; minutoChaveN=null; } // pouco relevante se so aconteceu 1x
+
+  // Quadras do dia + estado das horas fortes de quadra
+  const quadrasDia = S.quadras.filter(function(q){ return q.ts>=inicio && q.ts<fim; });
+  const quadraHorasOk=[], quadraHorasQuebra=[];
+  for(let h=0;h<24;h++){
+    const estab = _estabilidadeHora(S.quadras, h, 'quadra');
+    if(!estab || estab.cv>0.8 || estab.media<(100/24)) continue;
+    const mediaDiaQ = _mediaDiariaHora(S.quadras, h, 'quadra');
+    if(!mediaDiaQ || mediaDiaQ<1) continue;
+    const contagemQ = quadrasDia.filter(function(q){ return q.hora && parseInt(q.hora.split(':')[0])===h; }).length;
+    if(contagemQ >= mediaDiaQ*0.7) quadraHorasOk.push(h); else quadraHorasQuebra.push(h);
+  }
+
   let pontos=0, maxPontos=0;
   if(sniperPct!==null){ maxPontos+=40; pontos += sniperPct>=15?40:sniperPct>=8?25:10; }
   if(horasOk.length+horasQuebra.length>0){ maxPontos+=40; pontos += Math.round(40*horasOk.length/(horasOk.length+horasQuebra.length)); }
@@ -14808,7 +14829,9 @@ function calcularBoletimDia(offsetDias){
 
   return {diaRef:diaRef.getTime(), sniperPct:sniperPct, callsDia:callsDia.length, acertosDia:acertosDia,
     horasOk:horasOk, horasQuebra:horasQuebra, repPct:repPct, repCount:repeticoes, nota:nota, notaPct:notaPct,
-    triplosDia:triplosDia.length, melhorHora:melhorHora, melhorN:melhorN<0?null:melhorN, piorHora:piorHora, piorN:piorN};
+    triplosDia:triplosDia.length, melhorHora:melhorHora, melhorN:melhorN<0?null:melhorN, piorHora:piorHora, piorN:piorN,
+    minutoChave:minutoChave, minutoChaveN:minutoChaveN,
+    quadrasDia:quadrasDia.length, quadraHorasOk:quadraHorasOk.length, quadraHorasQuebra:quadraHorasQuebra};
 }
 
 function checkBoletimDiario(){
@@ -14863,7 +14886,7 @@ function renderBoletimDia(){
   try{ b = JSON.parse(localStorage.getItem('pro_boletim_ultimo')||'null'); }catch(e){}
   // Se o boletim guardado for de uma versão antiga (sem os campos novos, ex:
   // melhorHora/repCount), recalcula em vez de mostrar "undefined" nesses campos.
-  if(b && (b.melhorHora===undefined || b.repCount===undefined)) b = null;
+  if(b && (b.melhorHora===undefined || b.repCount===undefined || b.quadrasDia===undefined || b.minutoChave===undefined)) b = null;
   if(!b) b = calcularBoletimDia(1);
   if(!b || (b.callsDia===0 && b.triplosDia===0)){
     el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">📭 Ainda sem dados suficientes de ontem para gerar o boletim. Assim que registares o dia, aparece aqui sozinho.</div>';
@@ -14886,17 +14909,23 @@ function renderBoletimDia(){
   html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
     +'<div style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:2px solid '+corNota+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:'+corNota+';">'+b.nota+'</div>'
     +'<div><div style="font-size:0.5rem;color:var(--text);font-weight:700;">'+dataTxt+'</div>'
-    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosDia+' triplos registados</div></div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosDia+' triplos \xb7 '+b.quadrasDia+' quadras</div></div>'
     +'</div>';
   html += '<div style="font-size:0.46rem;color:var(--text);line-height:1.9;">';
   if(b.sniperPct!==null) html += '\ud83c\udfaf Sniper: '+b.acertosDia+'/'+b.callsDia+' ('+b.sniperPct+'%)<br>';
-  html += '\ud83c\udfc6 Horas fortes: '+b.horasOk.length+' normais';
+  html += '\ud83c\udfc6 Triplos: '+b.horasOk.length+' hora(s) normal(is)';
   if(b.horasQuebra.length) html += ', <span style="color:#ef4444;">'+b.horasQuebra.length+' quebrada(s) ('+b.horasQuebra.map(function(x){return pad(x.h)+'h';}).join(', ')+')</span>';
   html += '<br>';
+  if(b.quadraHorasOk+b.quadraHorasQuebra.length>0){
+    html += '\ud83d\udfe1 Quadras: '+b.quadraHorasOk+' hora(s) normal(is)';
+    if(b.quadraHorasQuebra.length) html += ', <span style="color:#ef4444;">'+b.quadraHorasQuebra.length+' quebrada(s) ('+b.quadraHorasQuebra.map(function(h){return pad(h)+'h';}).join(', ')+')</span>';
+    html += '<br>';
+  }
   if(b.repPct!==null) html += '\ud83d\udd01 Repeti\xe7\xe3o de n\xfamero: '+b.repCount+'x hoje ('+b.repPct+'%, normal: ~17%)<br>';
   if(b.melhorHora!==null) html += '\u2728 Melhor hora: '+pad(b.melhorHora)+'h ('+b.melhorN+' triplos)';
   if(b.piorHora!==null) html += ' \u00b7 \ud83e\udd76 Pior: '+pad(b.piorHora)+'h ('+b.piorN+')';
   if(b.melhorHora!==null || b.piorHora!==null) html += '<br>';
+  if(b.minutoChave!==null) html += '\ud83e\udde9 Minuto-chave: :'+pad(b.minutoChave)+' ('+b.minutoChaveN+'x hoje)<br>';
   html += '</div>';
 
   try{
@@ -14952,10 +14981,11 @@ function calcularBoletimSemana(offsetSemanas){
   const notaMediaPct = nDias ? Math.round(somaNotas/nDias) : null;
   const notaMedia = notaMediaPct===null?'—':notaMediaPct>=85?'A':notaMediaPct>=70?'B+':notaMediaPct>=55?'B':notaMediaPct>=40?'C':'D';
   const triplosSemana = S.triplos.filter(function(t){ return t.ts>=inicio && t.ts<fim; }).length;
+  const quadrasSemana = S.quadras.filter(function(q){ return q.ts>=inicio && q.ts<fim; }).length;
 
   return {inicio:inicio, fim:fim, sniperPct:sniperPct, callsSemana:callsSemana.length, acertosSemana:acertosSemana,
     topAtual:topAtual, topAnterior:topAnterior, mudou:mudou, notaMedia:notaMedia, notaMediaPct:notaMediaPct,
-    triplosSemana:triplosSemana, nDias:nDias};
+    triplosSemana:triplosSemana, quadrasSemana:quadrasSemana, nDias:nDias};
 }
 
 function checkBoletimSemanal(){
@@ -14984,6 +15014,7 @@ function renderBoletimSemana(){
   let b = null;
   try{ b = JSON.parse(localStorage.getItem('pro_boletim_semanal_ultimo')||'null'); }catch(e){}
   if(!b) b = calcularBoletimSemana(1);
+  if(b && b.quadrasSemana===undefined) b = calcularBoletimSemana(1);
   if(!b || b.nDias===0){
     el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">📭 Ainda sem uma semana completa de dados para o boletim semanal.</div>';
     return;
@@ -14992,7 +15023,7 @@ function renderBoletimSemana(){
   let html = '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
     +'<div style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:2px solid '+corNota+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:'+corNota+';">'+b.notaMedia+'</div>'
     +'<div><div style="font-size:0.5rem;color:var(--text);font-weight:700;">Semana de '+new Date(b.inicio).toLocaleDateString('pt-BR',{day:'numeric',month:'short'})+'</div>'
-    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosSemana+' triplos · '+b.nDias+' dia(s) avaliado(s)</div></div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosSemana+' triplos \xb7 '+(b.quadrasSemana||0)+' quadras \xb7 '+b.nDias+' dia(s) avaliado(s)</div></div>'
     +'</div>';
   html += '<div style="font-size:0.46rem;color:var(--text);line-height:1.9;">';
   if(b.sniperPct!==null) html += '🎯 Sniper: '+b.acertosSemana+'/'+b.callsSemana+' ('+b.sniperPct+'%)<br>';
@@ -15057,10 +15088,11 @@ function calcularBoletimMes(offsetMeses){
   const notaMediaPct = nDias ? Math.round(somaNotas/nDias) : null;
   const notaMedia = notaMediaPct===null?'—':notaMediaPct>=85?'A':notaMediaPct>=70?'B+':notaMediaPct>=55?'B':notaMediaPct>=40?'C':'D';
   const triplosMes = S.triplos.filter(function(t){ return t.ts>=inicio && t.ts<fim; }).length;
+  const quadrasMes = S.quadras.filter(function(q){ return q.ts>=inicio && q.ts<fim; }).length;
 
   return {inicio:inicio, fim:fim, sniperPct:sniperPct, callsMes:callsMes.length, acertosMes:acertosMes,
     topAtual:topAtual, topAnterior:topAnterior, mudou:mudou, notaMedia:notaMedia, notaMediaPct:notaMediaPct,
-    triplosMes:triplosMes, nDias:nDias};
+    triplosMes:triplosMes, quadrasMes:quadrasMes, nDias:nDias};
 }
 
 function checkBoletimMensal(){
@@ -15088,6 +15120,7 @@ function renderBoletimMes(){
   let b = null;
   try{ b = JSON.parse(localStorage.getItem('pro_boletim_mensal_ultimo')||'null'); }catch(e){}
   if(!b) b = calcularBoletimMes(1);
+  if(b && b.quadrasMes===undefined) b = calcularBoletimMes(1);
   if(!b || b.nDias===0){
     el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">📭 Ainda sem um mês completo de dados para o boletim mensal.</div>';
     return;
@@ -15097,7 +15130,7 @@ function renderBoletimMes(){
   let html = '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">'
     +'<div style="flex-shrink:0;width:48px;height:48px;border-radius:12px;border:2px solid '+corNota+';display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:'+corNota+';">'+b.notaMedia+'</div>'
     +'<div><div style="font-size:0.5rem;color:var(--text);font-weight:700;text-transform:capitalize;">'+mesTxt+'</div>'
-    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosMes+' triplos · '+b.nDias+' dia(s) avaliado(s)</div></div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);">'+b.triplosMes+' triplos \xb7 '+(b.quadrasMes||0)+' quadras \xb7 '+b.nDias+' dia(s) avaliado(s)</div></div>'
     +'</div>';
   html += '<div style="font-size:0.46rem;color:var(--text);line-height:1.9;">';
   if(b.sniperPct!==null) html += '🎯 Sniper: '+b.acertosMes+'/'+b.callsMes+' ('+b.sniperPct+'%)<br>';
