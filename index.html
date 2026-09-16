@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-129</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-130</div>
   </div>
 
   <!-- Display PIN -->
@@ -611,6 +611,15 @@ textarea:focus{border-color:var(--green)!important;}
 
   <!-- BOTAO DE EMERGENCIA - SILENCIO TOTAL -->
   <button data-essencial="1" onclick="silencioTotal()" style="width:100%;padding:11px;margin-bottom:10px;border-radius:12px;background:#2a0a0a;border:2px solid #ef4444;color:#ef4444;font-size:0.6rem;font-weight:700;cursor:pointer;">🔇 SILÊNCIO TOTAL (corta tudo agora)</button>
+
+  <!-- BOLETIM DE AMANHÃ -->
+  <div class="card" id="sec-boletim-amanha" data-essencial="1" style="margin-bottom:10px;border-color:#0a3a2a;">
+    <div class="ch">
+      <div class="ci" style="background:#051a10;">🔮</div>
+      <div><div class="ct" style="color:var(--green);">Boletim de Amanhã</div><div class="cs">Horas esperadas fortes e estáveis para o dia seguinte</div></div>
+    </div>
+    <div id="dash-boletim-amanha-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+  </div>
 
   <!-- BOLETIM DO DIA -->
   <div class="card" id="sec-boletim-dia" data-essencial="1" style="margin-bottom:10px;">
@@ -8671,6 +8680,7 @@ function renderDashboard(){
   safeRun(renderBoletimDia,'renderBoletimDia');
   safeRun(renderBoletimSemana,'renderBoletimSemana');
   safeRun(renderBoletimMes,'renderBoletimMes');
+  safeRun(renderBoletimAmanha,'renderBoletimAmanha');
   safeRun(applyModoEssencial,'applyModoEssencial');
   safeRun(syncTurnoPills,'syncTurnoPills');
 
@@ -15152,6 +15162,75 @@ function toggleNotifBoletimMensal(){
   if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
 }
 
+// ══════════════════════════════════════════════
+//  BOLETIM DE AMANHÃ — antecipa as horas esperadas fortes+estáveis
+// ══════════════════════════════════════════════
+// Ao contrário dos outros boletins (que resumem o que já aconteceu), este
+// olha para a frente: lista as horas do dia seguinte que, com os dados das
+// últimas 8 semanas, são acima da média E consistentes (mesmo critério do
+// _estabilidadeHora usado no Sniper). Não é uma previsão do resultado exato,
+// só um resumo de "que horas valem mais a pena estar atenta amanhã".
+function calcularBoletimAmanha(){
+  const horas = [];
+  for(let h=0;h<24;h++){
+    const estab = _estabilidadeHora(S.triplos, h, 'triplo');
+    if(!estab || estab.cv>0.8 || estab.media<(100/24)) continue;
+    horas.push({h:h, media:estab.media, cv:estab.cv, nSemanas:estab.nSemanas});
+  }
+  horas.sort(function(a,b){ return b.media-a.media; });
+  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
+  return {dataRef:amanha.getTime(), horas:horas};
+}
+
+function checkBoletimAmanha(){
+  if(localStorage.getItem('pro_notif_boletim_amanha')!=='1') return;
+  const agora = new Date();
+  if(agora.getHours()!==21 || agora.getMinutes()>10) return; // as 21h, para dar tempo de ver antes do dia seguinte
+  const hojeKey = _diaKey(Date.now());
+  const chave = 'pro_boletim_amanha_gerado_'+hojeKey;
+  if(localStorage.getItem(chave)==='1') return;
+  localStorage.setItem(chave,'1');
+  const b = calcularBoletimAmanha();
+  localStorage.setItem('pro_boletim_amanha_ultimo', JSON.stringify(b));
+  if(typeof Notification!=='undefined' && Notification.permission==='granted' && b.horas.length){
+    const top = b.horas.slice(0,3).map(function(x){ return pad(x.h)+'h'; }).join(', ');
+    try{
+      new Notification('\ud83d\udd2e Boletim de Amanh\xe3', { body: 'Horas mais fortes e est\xe1veis esperadas: '+top, tag:'mega-sicbac-boletim-amanha' });
+    }catch(e){}
+  }
+  if(typeof renderBoletimAmanha==='function') renderBoletimAmanha();
+}
+
+function renderBoletimAmanha(){
+  const el = document.getElementById('dash-boletim-amanha-conteudo');
+  if(!el) return;
+  const b = calcularBoletimAmanha(); // sempre recalculado — nao ha "resultado" para guardar, é so previsao
+  const dataTxt = new Date(b.dataRef).toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'});
+  if(!b.horas.length){
+    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">📭 Ainda sem dados suficientes para antecipar horas fortes.</div>';
+    return;
+  }
+  let html = '<div style="font-size:0.46rem;color:var(--text);font-weight:700;text-transform:capitalize;margin-bottom:6px;">'+dataTxt+'</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+  b.horas.slice(0,6).forEach(function(x, i){
+    const cor = i===0 ? 'var(--green)' : (i<3 ? '#fbbf24' : 'var(--dim2)');
+    html += '<div style="background:'+cor+'18;border:1px solid '+cor+'55;border-radius:9px;padding:5px 9px;font-size:0.46rem;color:'+cor+';font-weight:700;">'+pad(x.h)+'h</div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:6px;">Baseado nas últimas '+(b.horas[0]?b.horas[0].nSemanas:'-')+' semanas · acima da média e consistentes — não é garantia de resultado</div>';
+  el.innerHTML = html;
+}
+
+function toggleNotifBoletimAmanha(){
+  const atual = localStorage.getItem('pro_notif_boletim_amanha')==='1';
+  if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
+    _pedirPermissaoNotificacao(function(){ localStorage.setItem('pro_notif_boletim_amanha','1'); });
+    return;
+  }
+  localStorage.setItem('pro_notif_boletim_amanha', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
+
 function toggleNotifBoletim(){
   const atual = localStorage.getItem('pro_notif_boletim')==='1';
   if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
@@ -18343,6 +18422,16 @@ function renderAlarmeQuadrasConfig(){
     +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">No dia 1 de cada mês, logo após a meia-noite, resume o mês anterior e avisa se a "hora forte" mudou de um mês para o outro. Card no Dashboard, abaixo do Boletim Semanal. Precisa de autorizares notificações.</div>'
     +'</div>';
 
+  // Bloco 0h: Boletim de Amanhã
+  const notifBoletimAmanhaAtivo = localStorage.getItem('pro_notif_boletim_amanha')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🔮 Boletim de Amanhã</span>'
+    +toggleBtn(notifBoletimAmanhaAtivo,'toggleNotifBoletimAmanha()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Às 21h, avisa quais são as horas esperadas mais fortes e estáveis para amanhã. Card sempre visível no topo do Dashboard, recalculado em tempo real (não é uma previsão certa, só onde vale mais a pena estar atenta). Precisa de autorizares notificações.</div>'
+    +'</div>';
+
   // Bloco 1: Tempo sem sair
   html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
@@ -19169,6 +19258,7 @@ function verificacoesLeves(){
   safeRun(checkBoletimDiario,'checkBoletimDiario');
   safeRun(checkBoletimSemanal,'checkBoletimSemanal');
   safeRun(checkBoletimMensal,'checkBoletimMensal');
+  safeRun(checkBoletimAmanha,'checkBoletimAmanha');
 }
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
