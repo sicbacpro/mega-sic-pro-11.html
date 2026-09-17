@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-130</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-131</div>
   </div>
 
   <!-- Display PIN -->
@@ -1781,6 +1781,43 @@ textarea:focus{border-color:var(--green)!important;}
       <button class="btn" style="width:100%;background:#1a0a05;border-color:var(--orange)44;color:var(--orange);" onclick="extrairStreaksHistorico()">&#128260; Extrair do Histórico</button>
     </div>
     <div id="streak-historico" style="padding:8px;"></div>
+  </div>
+
+  <!-- VALIDADOR DE HIPOTESES -->
+  <div class="card" style="border-color:#0a2a3a;margin-bottom:10px;">
+    <div class="ch" style="border-color:#0a2a3a;">
+      <div class="ci" style="background:#051520;">🔬</div>
+      <div><div class="ct" style="color:#38bdf8;">Validador de Hipóteses</div><div class="cs">Testa uma observação tua contra o esperado ao acaso</div></div>
+    </div>
+    <div style="padding:8px 10px;">
+      <div style="font-size:0.44rem;color:var(--dim2);margin-bottom:6px;">Quando sai um...</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+        <select id="vh-tipo-origem" style="padding:7px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.5rem;">
+          <option value="triplo">🟢 Triplo</option>
+          <option value="quadra" selected>🟡 Quadra</option>
+          <option value="duplo">🟣 Duplo</option>
+        </select>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="number" id="vh-min-de" min="0" max="59" placeholder="min de" value="20" style="width:100%;padding:7px 4px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.5rem;text-align:center;">
+          <span style="font-size:0.44rem;color:var(--dim2);">a</span>
+          <input type="number" id="vh-min-ate" min="0" max="59" placeholder="min ate" value="29" style="width:100%;padding:7px 4px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.5rem;text-align:center;">
+        </div>
+      </div>
+      <div style="font-size:0.44rem;color:var(--dim2);margin-bottom:6px;">...quantas vezes sai outro...</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+        <select id="vh-tipo-destino" style="padding:7px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.5rem;">
+          <option value="triplo">🟢 Triplo</option>
+          <option value="quadra" selected>🟡 Quadra</option>
+          <option value="duplo">🟣 Duplo</option>
+        </select>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="number" id="vh-janela" min="1" max="1440" value="60" style="width:100%;padding:7px 4px;border-radius:8px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:0.5rem;text-align:center;">
+          <span style="font-size:0.44rem;color:var(--dim2);white-space:nowrap;">min depois</span>
+        </div>
+      </div>
+      <button class="btn" style="width:100%;background:#051520;border:1px solid #38bdf844;color:#38bdf8;" onclick="testarHipotese()">🔬 Testar</button>
+      <div id="vh-resultado" style="margin-top:8px;"></div>
+    </div>
   </div>
 
   <!-- VISAO PROFUNDA HEADER -->
@@ -10469,6 +10506,82 @@ function radarConvergenciaDados(periodo){
 function setRadarPeriodo(p){
   _radarPeriodo = p;
   renderRadarConvergencia();
+}
+
+// ══════════════════════════════════════════════
+//  VALIDADOR DE HIPÓTESES — testa "quando sai X no minuto A-B, sai Y em
+//  até N min?" contra o esperado ao acaso (mesmo raciocínio que usámos à
+//  mão para o gatilho e o padrão do minuto :20-29 da quadra).
+// ══════════════════════════════════════════════
+function _arrPorTipo(tipo){
+  if(tipo==='quadra') return S.quadras;
+  if(tipo==='duplo') return S.duplos;
+  return S.triplos;
+}
+function _confiavel(arr){
+  return arr.filter(function(e){ return e.ts && !e.imported; }).sort(function(a,b){ return a.ts-b.ts; });
+}
+function _testarSequencia(origemArr, destinoArrOrdenado, janelaMin){
+  const destinoTs = destinoArrOrdenado.map(function(d){ return d.ts; });
+  let comSeguimento=0, total=0;
+  origemArr.forEach(function(o){
+    // acha o primeiro evento destino com ts > o.ts (procura binaria simples)
+    let lo=0, hi=destinoTs.length;
+    while(lo<hi){ const mid=(lo+hi)>>1; if(destinoTs[mid]<=o.ts) lo=mid+1; else hi=mid; }
+    if(lo>=destinoTs.length) return;
+    const gap = (destinoTs[lo]-o.ts)/60000;
+    total++;
+    if(gap<=janelaMin) comSeguimento++;
+  });
+  return {comSeguimento:comSeguimento, total:total, pct: total? 100*comSeguimento/total : null};
+}
+function testarHipotese(){
+  const tipoOrigem = document.getElementById('vh-tipo-origem').value;
+  const tipoDestino = document.getElementById('vh-tipo-destino').value;
+  const minDe = parseInt(document.getElementById('vh-min-de').value);
+  const minAte = parseInt(document.getElementById('vh-min-ate').value);
+  const janela = parseInt(document.getElementById('vh-janela').value);
+  const el = document.getElementById('vh-resultado');
+  if(isNaN(minDe)||isNaN(minAte)||isNaN(janela)||minDe<0||minAte>59||minDe>minAte){
+    el.innerHTML = '<div class="empty" style="font-size:0.44rem;">Verifica os minutos (0-59) e a janela.</div>';
+    return;
+  }
+  const origemFull = _confiavel(_arrPorTipo(tipoOrigem));
+  const destinoFull = _confiavel(_arrPorTipo(tipoDestino));
+  const origemFiltrado = origemFull.filter(function(o){
+    if(!o.hora) return false;
+    const m = parseInt(o.hora.split(':')[1]);
+    return m>=minDe && m<=minAte;
+  });
+
+  const resultado = _testarSequencia(origemFiltrado, destinoFull, janela);
+  const baseline = _testarSequencia(origemFull, destinoFull, janela);
+
+  if(!resultado.total || !baseline.total || baseline.total<10){
+    el.innerHTML = '<div class="empty" style="font-size:0.44rem;">Dados insuficientes para testar isto (amostra muito pequena).</div>';
+    return;
+  }
+
+  const p0 = baseline.comSeguimento/baseline.total;
+  const n = resultado.total;
+  const se = Math.sqrt(n*p0*(1-p0));
+  const z = se>0 ? (resultado.comSeguimento-n*p0)/se : 0;
+
+  let veredito, cor;
+  if(n<30){ veredito='⚠️ Amostra pequena (n='+n+') — ainda não dá para confiar'; cor='#fbbf24'; }
+  else if(Math.abs(z)>=1.96){ veredito = (z>0?'✅ Sinal real, acima do esperado':'✅ Sinal real, abaixo do esperado'); cor='var(--green)'; }
+  else { veredito = '🫤 Sem sinal — dentro do que o acaso explicaria'; cor='var(--dim2)'; }
+
+  const nomeO = tipoOrigem==='quadra'?'quadra':tipoOrigem==='duplo'?'duplo':'triplo';
+  const nomeD = tipoDestino==='quadra'?'quadra':tipoDestino==='duplo'?'duplo':'triplo';
+
+  el.innerHTML = '<div style="background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:10px;">'
+    +'<div style="font-size:0.5rem;color:'+cor+';font-weight:700;margin-bottom:6px;">'+veredito+'</div>'
+    +'<div style="font-size:0.44rem;color:var(--text);line-height:1.8;">'
+    +'Com '+nomeO+' nos minutos '+minDe+'-'+minAte+': <b>'+resultado.comSeguimento+'/'+resultado.total+' ('+resultado.pct.toFixed(1)+'%)</b> teve outro '+nomeD+' em até '+janela+'min<br>'
+    +'Geral (sem filtrar minuto): <b>'+baseline.comSeguimento+'/'+baseline.total+' ('+baseline.pct.toFixed(1)+'%)</b><br>'
+    +'z-score: <b>'+z.toFixed(2)+'</b> (precisa de ±1.96 para ser considerado sinal real)'
+    +'</div></div>';
 }
 
 function renderRadarConvergencia(){
