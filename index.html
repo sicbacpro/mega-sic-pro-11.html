@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-133</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-134</div>
   </div>
 
   <!-- Display PIN -->
@@ -8682,28 +8682,34 @@ function _calcRitmoStats(){
 }
 function calcRitmoAtual(){
   const stats = _calcRitmoStats();
-  if(!stats) return null;
   const arr = _confiavel(S.triplos);
-  if(arr.length<2) return null;
+  if(arr.length<2) return {debug:true, nArr:arr.length, nTotal:S.triplos.length};
+  const ultimoTs = arr[arr.length-1].ts;
+  if(!stats) return {debug:true, nArr:arr.length, nTotal:S.triplos.length, ultimoTs:ultimoTs, ultimoHora:arr[arr.length-1].hora};
   const ultimoGap = (arr[arr.length-1].ts - arr[arr.length-2].ts)/60000;
   const rapido = ultimoGap < stats.mediana;
   const pContinua = rapido ? stats.pRapidoApósRapido : (1-stats.pRapidoApósLento);
-  return {rapido:rapido, ultimoGap:ultimoGap, mediana:stats.mediana, pContinua:pContinua};
+  return {rapido:rapido, ultimoGap:ultimoGap, mediana:stats.mediana, pContinua:pContinua,
+    ultimoTs:ultimoTs, ultimoHora:arr[arr.length-1].hora, nArr:arr.length, nTotal:S.triplos.length};
 }
 function renderRitmoAtual(){
   const el = document.getElementById('dash-ritmo-conteudo');
   if(!el) return;
   const r = calcRitmoAtual();
-  if(!r){
-    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Dados insuficientes ainda para calcular o ritmo.</div>';
+  if(!r || r.debug){
+    const dataUltimo = r && r.ultimoTs ? new Date(r.ultimoTs).toLocaleString('pt-BR') : '—';
+    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Dados insuficientes ainda para calcular o ritmo.'
+      +'<br><span style="font-size:0.4rem;">[debug] registos fiáveis: '+(r?r.nArr:0)+'/'+(r?r.nTotal:S.triplos.length)+' · último: '+dataUltimo+'</span></div>';
     return;
   }
   const cor = r.rapido ? 'var(--green)' : '#fbbf24';
   const label = r.rapido ? '⚡ RÁPIDO' : '🐢 LENTO';
+  const dataUltimo = new Date(r.ultimoTs).toLocaleString('pt-BR');
   el.innerHTML = '<div style="text-align:center;padding:4px 0;">'
     +'<div style="font-size:1.15rem;font-weight:700;color:'+cor+';font-family:var(--font-mono);letter-spacing:0.08em;">'+label+'</div>'
     +'<div style="font-size:0.44rem;color:var(--dim2);margin-top:5px;">Último intervalo: '+r.ultimoGap.toFixed(1)+'min (mediana: '+r.mediana.toFixed(1)+'min)</div>'
     +'<div style="font-size:0.48rem;color:var(--text);margin-top:4px;"><b style="color:'+cor+';">'+Math.round(r.pContinua*100)+'%</b> de chance de continuar assim</div>'
+    +'<div style="font-size:0.38rem;color:var(--dim2);margin-top:6px;">[debug] último triplo usado: '+r.ultimoHora+' ('+dataUltimo+') · '+r.nArr+'/'+r.nTotal+' registos fiáveis</div>'
     +'</div>';
 }
 
