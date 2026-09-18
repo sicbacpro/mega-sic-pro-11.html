@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-134</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-135</div>
   </div>
 
   <!-- Display PIN -->
@@ -655,6 +655,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct">Boletim do Mês</div><div class="cs">Nota média mensal + deriva da hora forte mês a mês</div></div>
     </div>
     <div id="dash-boletim-mes-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+  </div>
+
+  <!-- SCAN SEMANAL -->
+  <div class="card" id="sec-scan-semanal" data-essencial="1" style="margin-bottom:10px;border-color:#0a2a3a;">
+    <div class="ch">
+      <div class="ci" style="background:#051520;">🔍</div>
+      <div><div class="ct" style="color:#38bdf8;">Scan Semanal</div><div class="cs">Testa sozinha padrões simples, só avisa se for sinal real</div></div>
+    </div>
+    <div id="dash-scan-semanal-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
   </div>
 
   <!-- CENTRAL DE PREPARACAO -->
@@ -8680,6 +8689,30 @@ function _calcRitmoStats(){
     };
   });
 }
+// Ritmo esperado por hora do dia — validado: varia muito (ex: 13% rápido de
+// madrugada vs 84% às 23h), provavelmente ligado ao tráfego da plataforma.
+function _calcRitmoPorHora(){
+  return _cacheGet('ritmo_por_hora_'+S.triplos.length, function(){
+    const stats = _calcRitmoStats();
+    if(!stats) return null;
+    const arr = _confiavel(S.triplos);
+    const porHora = {};
+    for(let h=0;h<24;h++) porHora[h] = [0,0];
+    for(let i=1;i<arr.length;i++){
+      const g = (arr[i].ts-arr[i-1].ts)/60000;
+      if(!(g>0 && g<=120) || !arr[i].hora) continue;
+      const h = parseInt(arr[i].hora.split(':')[0]);
+      porHora[h][1]++;
+      if(g<stats.mediana) porHora[h][0]++;
+    }
+    const resultado = {};
+    for(let h=0;h<24;h++){
+      const [rap,tot] = porHora[h];
+      resultado[h] = tot>=20 ? Math.round(100*rap/tot) : null;
+    }
+    return resultado;
+  });
+}
 function calcRitmoAtual(){
   const stats = _calcRitmoStats();
   const arr = _confiavel(S.triplos);
@@ -8689,8 +8722,15 @@ function calcRitmoAtual(){
   const ultimoGap = (arr[arr.length-1].ts - arr[arr.length-2].ts)/60000;
   const rapido = ultimoGap < stats.mediana;
   const pContinua = rapido ? stats.pRapidoApósRapido : (1-stats.pRapidoApósLento);
+  const horaAtual = new Date().getHours();
+  const ritmoNormalHora = _calcRitmoPorHora();
+  const normalNestaHora = ritmoNormalHora ? ritmoNormalHora[horaAtual] : null;
+  const estabHoraAtual = typeof _estabilidadeHora==='function' ? _estabilidadeHora(S.triplos, horaAtual, 'triplo') : null;
+  const horaEhForte = !!(estabHoraAtual && estabHoraAtual.cv<=0.8 && estabHoraAtual.media>=(100/24));
+  const sinalDuplo = rapido && horaEhForte;
   return {rapido:rapido, ultimoGap:ultimoGap, mediana:stats.mediana, pContinua:pContinua,
-    ultimoTs:ultimoTs, ultimoHora:arr[arr.length-1].hora, nArr:arr.length, nTotal:S.triplos.length};
+    ultimoTs:ultimoTs, ultimoHora:arr[arr.length-1].hora, nArr:arr.length, nTotal:S.triplos.length,
+    normalNestaHora:normalNestaHora, horaEhForte:horaEhForte, sinalDuplo:sinalDuplo};
 }
 function renderRitmoAtual(){
   const el = document.getElementById('dash-ritmo-conteudo');
@@ -8704,12 +8744,17 @@ function renderRitmoAtual(){
   }
   const cor = r.rapido ? 'var(--green)' : '#fbbf24';
   const label = r.rapido ? '⚡ RÁPIDO' : '🐢 LENTO';
-  const dataUltimo = new Date(r.ultimoTs).toLocaleString('pt-BR');
-  el.innerHTML = '<div style="text-align:center;padding:4px 0;">'
+  const sinalHtml = r.sinalDuplo
+    ? '<div style="background:linear-gradient(135deg,var(--green)22,var(--green)08);border:1px solid var(--green);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:0.46rem;color:var(--green);font-weight:700;">🔥 SINAL DUPLO — ritmo rápido + hora forte e estável</div>'
+    : '';
+  const contextoHtml = r.normalNestaHora!==null
+    ? '<div style="font-size:0.4rem;color:var(--dim2);margin-top:3px;">Normal para esta hora: '+r.normalNestaHora+'% rápido</div>'
+    : '';
+  el.innerHTML = sinalHtml + '<div style="text-align:center;padding:4px 0;">'
     +'<div style="font-size:1.15rem;font-weight:700;color:'+cor+';font-family:var(--font-mono);letter-spacing:0.08em;">'+label+'</div>'
     +'<div style="font-size:0.44rem;color:var(--dim2);margin-top:5px;">Último intervalo: '+r.ultimoGap.toFixed(1)+'min (mediana: '+r.mediana.toFixed(1)+'min)</div>'
     +'<div style="font-size:0.48rem;color:var(--text);margin-top:4px;"><b style="color:'+cor+';">'+Math.round(r.pContinua*100)+'%</b> de chance de continuar assim</div>'
-    +'<div style="font-size:0.38rem;color:var(--dim2);margin-top:6px;">[debug] último triplo usado: '+r.ultimoHora+' ('+dataUltimo+') · '+r.nArr+'/'+r.nTotal+' registos fiáveis</div>'
+    +contextoHtml
     +'</div>';
 }
 
@@ -8814,6 +8859,7 @@ function renderDashboard(){
   safeRun(renderBoletimDia,'renderBoletimDia');
   safeRun(renderBoletimSemana,'renderBoletimSemana');
   safeRun(renderBoletimMes,'renderBoletimMes');
+  safeRun(renderScanSemanal,'renderScanSemanal');
   safeRun(renderBoletimAmanha,'renderBoletimAmanha');
   safeRun(renderRitmoAtual,'renderRitmoAtual');
   safeRun(applyModoEssencial,'applyModoEssencial');
@@ -15448,6 +15494,123 @@ function toggleNotifBoletimAmanha(){
   if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
 }
 
+// ══════════════════════════════════════════════
+//  NOTIFICAÇÃO: MUDANÇA DE RITMO (lento → rápido)
+// ══════════════════════════════════════════════
+function checkMudancaRitmo(){
+  if(localStorage.getItem('pro_notif_mudanca_ritmo')!=='1') return;
+  if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
+  const r = typeof calcRitmoAtual==='function' ? calcRitmoAtual() : null;
+  if(!r || r.debug) return;
+  const estadoAnterior = localStorage.getItem('pro_ritmo_ultimo_estado');
+  const estadoAtual = r.rapido ? 'rapido' : 'lento';
+  localStorage.setItem('pro_ritmo_ultimo_estado', estadoAtual);
+  if(estadoAnterior==='lento' && estadoAtual==='rapido'){
+    let corpo = '\u26a1 O ritmo passou de lento para r\xe1pido agora ('+Math.round(r.pContinua*100)+'% de continuar assim).';
+    if(r.sinalDuplo) corpo += ' \ud83d\udd25 E esta hora \xe9 tamb\xe9m forte e est\xe1vel — sinal duplo!';
+    try{
+      new Notification('\u26a1 Ritmo mudou para R\xc1PIDO', { body: corpo, tag:'mega-sicbac-mudanca-ritmo' });
+    }catch(e){}
+    if(typeof falarAlerta==='function') falarAlerta('Aten\xe7\xe3o. O ritmo do jogo passou a r\xe1pido agora.');
+  }
+}
+function toggleNotifMudancaRitmo(){
+  const atual = localStorage.getItem('pro_notif_mudanca_ritmo')==='1';
+  if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
+    _pedirPermissaoNotificacao(function(){ localStorage.setItem('pro_notif_mudanca_ritmo','1'); });
+    return;
+  }
+  localStorage.setItem('pro_notif_mudanca_ritmo', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
+
+// ══════════════════════════════════════════════
+//  SCAN AUTOMÁTICO SEMANAL — testa sozinha um conjunto fixo de hipóteses
+//  simples (o mesmo motor do Validador de Hipóteses) e só avisa quando
+//  encontra algo que passa no teste estatístico (|z|>=1.96, n>=30).
+// ══════════════════════════════════════════════
+function _scanSemanalHipoteses(){
+  const buckets = [[0,9],[10,19],[20,29],[30,39],[40,49],[50,59]];
+  const combos = [
+    {origemTipo:'quadra', destinoTipo:'quadra', janela:60, nomeO:'quadra', nomeD:'quadra'},
+    {origemTipo:'triplo', destinoTipo:'quadra', janela:90, nomeO:'triplo', nomeD:'quadra'},
+    {origemTipo:'triplo', destinoTipo:'triplo', janela:15, nomeO:'triplo', nomeD:'triplo'}
+  ];
+  const resultados = [];
+  combos.forEach(function(combo){
+    const origemFull = _confiavel(_arrPorTipo(combo.origemTipo));
+    const destinoFull = _confiavel(_arrPorTipo(combo.destinoTipo));
+    const baseline = _testarSequencia(origemFull, destinoFull, combo.janela);
+    if(!baseline.total || baseline.total<10) return;
+    const p0 = baseline.comSeguimento/baseline.total;
+    buckets.forEach(function(b){
+      const origemFiltrado = origemFull.filter(function(o){
+        if(!o.hora) return false;
+        const m = parseInt(o.hora.split(':')[1]);
+        return m>=b[0] && m<=b[1];
+      });
+      const resultado = _testarSequencia(origemFiltrado, destinoFull, combo.janela);
+      if(resultado.total<30) return;
+      const n = resultado.total;
+      const se = Math.sqrt(n*p0*(1-p0));
+      const z = se>0 ? (resultado.comSeguimento-n*p0)/se : 0;
+      if(Math.abs(z)>=1.96){
+        resultados.push({
+          descricao: combo.nomeO+' nos min '+b[0]+'-'+b[1]+' \u2192 '+combo.nomeD+' em \u2264'+combo.janela+'min',
+          pct: resultado.pct, pctBase: baseline.pct, z: z, n: n
+        });
+      }
+    });
+  });
+  return resultados;
+}
+function checkScanSemanal(){
+  if(localStorage.getItem('pro_notif_scan_semanal')!=='1') return;
+  const agora = new Date();
+  if(agora.getDay()!==0 || agora.getHours()!==20 || agora.getMinutes()>10) return; // domingo as 20h
+  const chave = 'pro_scan_gerado_'+_diaKey(Date.now());
+  if(localStorage.getItem(chave)==='1') return;
+  localStorage.setItem(chave,'1');
+  const resultados = _scanSemanalHipoteses();
+  localStorage.setItem('pro_scan_ultimo', JSON.stringify({ts:Date.now(), resultados:resultados}));
+  if(typeof Notification!=='undefined' && Notification.permission==='granted' && resultados.length){
+    const corpo = resultados.length+' padr\xe3o(\xf5es) com sinal real encontrado(s) esta semana. V\xea os detalhes na app.';
+    try{ new Notification('\ud83d\udd0d Scan Semanal', { body: corpo, tag:'mega-sicbac-scan-semanal' }); }catch(e){}
+  }
+  if(typeof renderScanSemanal==='function') renderScanSemanal();
+}
+function renderScanSemanal(){
+  const el = document.getElementById('dash-scan-semanal-conteudo');
+  if(!el) return;
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem('pro_scan_ultimo')||'null'); }catch(e){}
+  if(!saved || !saved.resultados){
+    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Ainda sem scan feito. Corre todos os domingos às 20h (com a notificação ativa).</div>';
+    return;
+  }
+  if(!saved.resultados.length){
+    el.innerHTML = '<div style="font-size:0.46rem;color:var(--dim2);">Nenhum padrão novo com sinal real encontrado esta semana ('+new Date(saved.ts).toLocaleDateString('pt-BR')+').</div>';
+    return;
+  }
+  let html = '<div style="font-size:0.42rem;color:var(--dim2);margin-bottom:6px;">Scan de '+new Date(saved.ts).toLocaleDateString('pt-BR')+':</div>';
+  saved.resultados.forEach(function(r){
+    html += '<div style="background:var(--card2);border:1px solid var(--green);border-radius:8px;padding:6px 8px;margin-bottom:5px;font-size:0.44rem;">'
+      +'<b style="color:var(--green);">'+r.descricao+'</b><br>'
+      +r.pct.toFixed(1)+'% vs '+r.pctBase.toFixed(1)+'% geral (z='+r.z.toFixed(2)+', n='+r.n+')'
+      +'</div>';
+  });
+  el.innerHTML = html;
+}
+function toggleNotifScanSemanal(){
+  const atual = localStorage.getItem('pro_notif_scan_semanal')==='1';
+  if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
+    _pedirPermissaoNotificacao(function(){ localStorage.setItem('pro_notif_scan_semanal','1'); });
+    return;
+  }
+  localStorage.setItem('pro_notif_scan_semanal', atual?'0':'1');
+  if(typeof renderAlarmeQuadrasConfig==='function') renderAlarmeQuadrasConfig();
+}
+
 function toggleNotifBoletim(){
   const atual = localStorage.getItem('pro_notif_boletim')==='1';
   if(!atual && (typeof Notification==='undefined' || Notification.permission!=='granted')){
@@ -18649,6 +18812,26 @@ function renderAlarmeQuadrasConfig(){
     +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Às 21h, avisa quais são as horas esperadas mais fortes e estáveis para amanhã. Card sempre visível no topo do Dashboard, recalculado em tempo real (não é uma previsão certa, só onde vale mais a pena estar atenta). Precisa de autorizares notificações.</div>'
     +'</div>';
 
+  // Bloco 0i: Mudança de Ritmo
+  const notifMudancaRitmoAtivo = localStorage.getItem('pro_notif_mudanca_ritmo')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">⚡ Mudança de Ritmo</span>'
+    +toggleBtn(notifMudancaRitmoAtivo,'toggleNotifMudancaRitmo()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Avisa assim que o ritmo do jogo passa de lento para rápido (ligado ao tráfego da plataforma). Se a hora também for forte e estável, avisa que é "sinal duplo". Precisa de autorizares notificações.</div>'
+    +'</div>';
+
+  // Bloco 0j: Scan Semanal
+  const notifScanSemanalAtivo = localStorage.getItem('pro_notif_scan_semanal')==='1';
+  html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+    +'<span style="font-size:0.5rem;color:var(--text);font-weight:700;">🔍 Scan Semanal</span>'
+    +toggleBtn(notifScanSemanalAtivo,'toggleNotifScanSemanal()','✅ Ativo','⭘ Desativado')
+    +'</div>'
+    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:4px;">Todo domingo às 20h, testa sozinha um conjunto de padrões simples de minuto (mesmo motor do Validador de Hipóteses) e só avisa se algum passar no teste estatístico. Card no Dashboard. Precisa de autorizares notificações.</div>'
+    +'</div>';
+
   // Bloco 1: Tempo sem sair
   html += '<div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
@@ -19475,7 +19658,9 @@ function verificacoesLeves(){
   safeRun(checkBoletimDiario,'checkBoletimDiario');
   safeRun(checkBoletimSemanal,'checkBoletimSemanal');
   safeRun(checkBoletimMensal,'checkBoletimMensal');
+  safeRun(checkScanSemanal,'checkScanSemanal');
   safeRun(checkBoletimAmanha,'checkBoletimAmanha');
+  safeRun(checkMudancaRitmo,'checkMudancaRitmo');
 }
 setInterval(()=>{
   const ativa = id => { const p = document.getElementById(id); return p && p.classList.contains('active'); };
