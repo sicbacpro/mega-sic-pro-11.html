@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-132</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-133</div>
   </div>
 
   <!-- Display PIN -->
@@ -3466,7 +3466,7 @@ function _mediaDiariaHoraTodas(arr){
   const porHoraDia = {};
   for(let h=0;h<24;h++) porHoraDia[h] = {};
   arr.forEach(function(e){
-    if(!e.ts || !e.hora || e.imported || e.ts<limiteTs) return;
+    if(!e.ts || !e.hora || (e.imported && !e.registadoEm) || e.ts<limiteTs) return;
     const h = parseInt(e.hora.split(':')[0]);
     const d = new Date(e.ts);
     const key = d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
@@ -3489,7 +3489,7 @@ function _estabilidadeHoraTodas(arr){
   const limiteTs = Date.now() - JANELA_ESTABILIDADE_SEMANAS*7*24*60*60*1000;
   const porSemana = {};
   arr.forEach(function(e){
-    if(!e.ts || !e.hora || e.imported || e.ts<limiteTs) return;
+    if(!e.ts || !e.hora || (e.imported && !e.registadoEm) || e.ts<limiteTs) return;
     const d = new Date(e.ts);
     const diaSemana = (d.getDay()+6)%7; // 0=segunda
     const seg = new Date(d.getFullYear(), d.getMonth(), d.getDate()-diaSemana);
@@ -10611,7 +10611,13 @@ function _arrPorTipo(tipo){
   return S.triplos;
 }
 function _confiavel(arr){
-  return arr.filter(function(e){ return e.ts && !e.imported; }).sort(function(a,b){ return a.ts-b.ts; });
+  // Antes só aceitava registos NÃO importados — mas como o registo normal
+  // agora é por importação (print de 3 em 3h), isso deixava o Ritmo e o
+  // Validador de Hipóteses presos a dados antigos, sem verem nada recente.
+  // Os imports feitos depois da correção do `ts` (que têm `registadoEm`)
+  // já têm hora fiável, por isso também contam — só se exclui o import
+  // antigo, de antes da correção, que não tinha esse campo.
+  return arr.filter(function(e){ return e.ts && (!e.imported || e.registadoEm); }).sort(function(a,b){ return a.ts-b.ts; });
 }
 function _testarSequencia(origemArr, destinoArrOrdenado, janelaMin){
   const destinoTs = destinoArrOrdenado.map(function(d){ return d.ts; });
@@ -15158,7 +15164,7 @@ function renderBoletimDia(){
 function _topHoraSemana(arr, inicio, fim){
   const horas = {};
   arr.forEach(function(e){
-    if(!e.ts || !e.hora || e.imported) return;
+    if(!e.ts || !e.hora || (e.imported && !e.registadoEm)) return;
     if(e.ts<inicio || e.ts>=fim) return;
     const h = parseInt(e.hora.split(':')[0]);
     horas[h] = (horas[h]||0)+1;
@@ -15266,7 +15272,7 @@ function toggleNotifBoletimSemanal(){
 function _topHoraMes(arr, inicio, fim){
   const horas = {};
   arr.forEach(function(e){
-    if(!e.ts || !e.hora || e.imported) return;
+    if(!e.ts || !e.hora || (e.imported && !e.registadoEm)) return;
     if(e.ts<inicio || e.ts>=fim) return;
     const h = parseInt(e.hora.split(':')[0]);
     horas[h] = (horas[h]||0)+1;
