@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-131</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-132</div>
   </div>
 
   <!-- Display PIN -->
@@ -611,6 +611,15 @@ textarea:focus{border-color:var(--green)!important;}
 
   <!-- BOTAO DE EMERGENCIA - SILENCIO TOTAL -->
   <button data-essencial="1" onclick="silencioTotal()" style="width:100%;padding:11px;margin-bottom:10px;border-radius:12px;background:#2a0a0a;border:2px solid #ef4444;color:#ef4444;font-size:0.6rem;font-weight:700;cursor:pointer;">🔇 SILÊNCIO TOTAL (corta tudo agora)</button>
+
+  <!-- RITMO DO JOGO -->
+  <div class="card" id="sec-ritmo-jogo" data-essencial="1" style="margin-bottom:10px;border-color:#3a2a0a;">
+    <div class="ch">
+      <div class="ci" style="background:#1a1005;">⚡</div>
+      <div><div class="ct" style="color:var(--orange);">Ritmo do Jogo</div><div class="cs">Rápido ou lento agora — ligado ao tráfego da plataforma</div></div>
+    </div>
+    <div id="dash-ritmo-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+  </div>
 
   <!-- BOLETIM DE AMANHÃ -->
   <div class="card" id="sec-boletim-amanha" data-essencial="1" style="margin-bottom:10px;border-color:#0a3a2a;">
@@ -6576,13 +6585,13 @@ function calcTQScore(){
       const currSlot = agora.getHours().toString().padStart(2,'0')+':'+String(Math.floor(agora.getMinutes()/15)*15).padStart(2,'0');
       const currVal = blocos[currSlot]||0;
       const f3 = maxB>minB ? Math.round(((currVal-minB)/(maxB-minB))*100) : 50;
-      score += f3*0.25;
+      score += f3*0.15;
       fatores.push({label:'Bloco 15m',val:f3,desc:currVal+' eventos neste bloco historicamente'});
     } else {
-      score += 50*0.25;
+      score += 50*0.15;
     }
   } else {
-    score += 50*0.25;
+    score += 50*0.15;
   }
 
   // Fator 4: Nao houve triplo/quadra muito recente (peso 10%)
@@ -6600,6 +6609,18 @@ function calcTQScore(){
   const f4 = minRecente<3?20:minRecente<8?60:90;
   score += f4*0.10;
   fatores.push({label:'Recencia',val:f4,desc:minRecente<999?'Ultimo ha '+minRecente+'m':'Nenhum recente'});
+
+  // Fator 5: Ritmo do jogo (peso 10%) — validado com dados reais: depois de
+  // um intervalo rápido entre triplos, o próximo tende fortemente a também
+  // ser rápido (e vice-versa), provavelmente ligado ao tráfego da plataforma.
+  const ritmo = typeof calcRitmoAtual==='function' ? calcRitmoAtual() : null;
+  if(ritmo){
+    const f5 = Math.round(ritmo.pContinua*100);
+    score += f5*0.10;
+    fatores.push({label:'Ritmo do Jogo',val:f5,desc:(ritmo.rapido?'⚡ Rápido agora':'🐢 Lento agora')+' — '+Math.round(ritmo.pContinua*100)+'% de continuar'});
+  } else {
+    score += 50*0.10;
+  }
 
   return {score:Math.round(Math.min(100,Math.max(0,score))), fatores};
 }
@@ -6742,14 +6763,14 @@ function calcQQScore(){
       const currSlot = agora.getHours().toString().padStart(2,'0')+':'+String(Math.floor(agora.getMinutes()/15)*15).padStart(2,'0');
       const currVal = blocos[currSlot]||0;
       const f3 = maxB>minB ? Math.round(((currVal-minB)/(maxB-minB))*100) : 50;
-      score += f3*0.25;
+      score += f3*0.15;
       fatores.push({label:'Bloco 15m',val:f3,desc:currVal+' quadras neste bloco historicamente'});
     } else {
-      score += 50*0.25;
+      score += 50*0.15;
       fatores.push({label:'Bloco 15m',val:50,desc:'Dados insuficientes'});
     }
   } else {
-    score += 50*0.25;
+    score += 50*0.15;
     fatores.push({label:'Bloco 15m',val:50,desc:'Dados insuficientes'});
   }
 
@@ -6763,6 +6784,18 @@ function calcQQScore(){
   const f4 = minRecente<8?20:minRecente<20?60:90;
   score += f4*0.10;
   fatores.push({label:'Rec\xeancia',val:f4,desc:minRecente<999?'\xdaltima h\xe1 '+minRecente+'m':'Nenhuma recente'});
+
+  // Fator 5: Ritmo do jogo (peso 10%) — mais rodadas por minuto (ritmo rápido)
+  // também aumenta a chance de sair quadra num dado período, mesmo sem
+  // saber qual número.
+  const ritmoQ = typeof calcRitmoAtual==='function' ? calcRitmoAtual() : null;
+  if(ritmoQ){
+    const f5 = Math.round(ritmoQ.pContinua*100);
+    score += f5*0.10;
+    fatores.push({label:'Ritmo do Jogo',val:f5,desc:(ritmoQ.rapido?'⚡ Rápido agora':'🐢 Lento agora')+' — '+Math.round(ritmoQ.pContinua*100)+'% de continuar'});
+  } else {
+    score += 50*0.10;
+  }
 
   return {score:Math.round(Math.min(100,Math.max(0,score))), fatores};
 }
@@ -8616,6 +8649,64 @@ function renderProximaHoraForte(){
 // ══════════════════════════════════════════════
 //  PROXIMA HORA FORTE - TRIPLOS (sem ciclo real; usa "mais forte ainda por sair hoje")
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  RITMO DO JOGO — deteta se o jogo está num período rápido ou lento agora,
+//  usando o intervalo entre os últimos triplos. Confirmado com dados reais:
+//  depois de um intervalo rápido, o próximo também costuma ser rápido (~79%);
+//  depois de um intervalo lento, só ~21% das vezes o próximo é rápido —
+//  efeito forte, ligado ao tráfego geral da plataforma (mais jogadores =
+//  rodadas mais rápidas), não ao número que vai sair.
+function _calcRitmoStats(){
+  return _cacheGet('ritmo_stats_'+S.triplos.length, function(){
+    const arr = _confiavel(S.triplos);
+    const gaps = [];
+    for(let i=1;i<arr.length;i++){
+      const g = (arr[i].ts-arr[i-1].ts)/60000;
+      if(g>0 && g<=120) gaps.push(g);
+    }
+    if(gaps.length<50) return null;
+    const sorted = gaps.slice().sort(function(a,b){ return a-b; });
+    const mediana = sorted[Math.floor(sorted.length/2)];
+    let apRapN=0, apRapTot=0, apLenN=0, apLenTot=0;
+    for(let i=1;i<gaps.length;i++){
+      const atualRapido = gaps[i]<mediana;
+      if(gaps[i-1]<mediana){ apRapTot++; if(atualRapido) apRapN++; }
+      else { apLenTot++; if(atualRapido) apLenN++; }
+    }
+    return {
+      mediana: mediana,
+      pRapidoApósRapido: apRapTot? apRapN/apRapTot : 0.5,
+      pRapidoApósLento: apLenTot? apLenN/apLenTot : 0.5
+    };
+  });
+}
+function calcRitmoAtual(){
+  const stats = _calcRitmoStats();
+  if(!stats) return null;
+  const arr = _confiavel(S.triplos);
+  if(arr.length<2) return null;
+  const ultimoGap = (arr[arr.length-1].ts - arr[arr.length-2].ts)/60000;
+  const rapido = ultimoGap < stats.mediana;
+  const pContinua = rapido ? stats.pRapidoApósRapido : (1-stats.pRapidoApósLento);
+  return {rapido:rapido, ultimoGap:ultimoGap, mediana:stats.mediana, pContinua:pContinua};
+}
+function renderRitmoAtual(){
+  const el = document.getElementById('dash-ritmo-conteudo');
+  if(!el) return;
+  const r = calcRitmoAtual();
+  if(!r){
+    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Dados insuficientes ainda para calcular o ritmo.</div>';
+    return;
+  }
+  const cor = r.rapido ? 'var(--green)' : '#fbbf24';
+  const label = r.rapido ? '⚡ RÁPIDO' : '🐢 LENTO';
+  el.innerHTML = '<div style="text-align:center;padding:4px 0;">'
+    +'<div style="font-size:1.15rem;font-weight:700;color:'+cor+';font-family:var(--font-mono);letter-spacing:0.08em;">'+label+'</div>'
+    +'<div style="font-size:0.44rem;color:var(--dim2);margin-top:5px;">Último intervalo: '+r.ultimoGap.toFixed(1)+'min (mediana: '+r.mediana.toFixed(1)+'min)</div>'
+    +'<div style="font-size:0.48rem;color:var(--text);margin-top:4px;"><b style="color:'+cor+';">'+Math.round(r.pContinua*100)+'%</b> de chance de continuar assim</div>'
+    +'</div>';
+}
+
 function renderProximaHoraForteTriplo(){
   const el = document.getElementById('proxima-hora-forte-triplo');
   if(!el) return;
@@ -8718,6 +8809,7 @@ function renderDashboard(){
   safeRun(renderBoletimSemana,'renderBoletimSemana');
   safeRun(renderBoletimMes,'renderBoletimMes');
   safeRun(renderBoletimAmanha,'renderBoletimAmanha');
+  safeRun(renderRitmoAtual,'renderRitmoAtual');
   safeRun(applyModoEssencial,'applyModoEssencial');
   safeRun(syncTurnoPills,'syncTurnoPills');
 
