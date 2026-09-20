@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-136</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-137</div>
   </div>
 
   <!-- Display PIN -->
@@ -15581,8 +15581,14 @@ function checkScanSemanal(){
 }
 function correrScanAgora(){
   showToast('🔍 A correr o scan...','green');
-  const resultados = _scanSemanalHipoteses();
-  localStorage.setItem('pro_scan_ultimo', JSON.stringify({ts:Date.now(), resultados:resultados}));
+  try{
+    const resultados = _scanSemanalHipoteses();
+    localStorage.setItem('pro_scan_ultimo', JSON.stringify({ts:Date.now(), resultados:resultados}));
+    showToast('✅ Scan concluído — '+resultados.length+' padrão(ões) encontrado(s).','green');
+  }catch(e){
+    showToast('❌ Erro no scan: '+e.message,'red');
+    console.error('correrScanAgora error:', e);
+  }
   if(typeof renderScanSemanal==='function') renderScanSemanal();
 }
 function renderScanSemanal(){
