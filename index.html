@@ -458,7 +458,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-137</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-138</div>
   </div>
 
   <!-- Display PIN -->
@@ -664,6 +664,9 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:#38bdf8;">Scan Semanal</div><div class="cs">Testa sozinha padrões simples, só avisa se for sinal real</div></div>
     </div>
     <div id="dash-scan-semanal-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
+    <div style="padding:0 10px 10px;">
+      <button type="button" onclick="correrScanAgora()" style="width:100%;padding:6px;border-radius:8px;background:#051520;border:1px solid #38bdf844;color:#38bdf8;font-size:0.44rem;font-weight:700;cursor:pointer;">🔍 Correr agora</button>
+    </div>
   </div>
 
   <!-- CENTRAL DE PREPARACAO -->
@@ -15594,15 +15597,14 @@ function correrScanAgora(){
 function renderScanSemanal(){
   const el = document.getElementById('dash-scan-semanal-conteudo');
   if(!el) return;
-  const botaoManual = '<button onclick="correrScanAgora()" style="width:100%;padding:6px;margin-top:8px;border-radius:8px;background:#051520;border:1px solid #38bdf844;color:#38bdf8;font-size:0.44rem;font-weight:700;cursor:pointer;">🔍 Correr agora</button>';
   let saved = null;
   try{ saved = JSON.parse(localStorage.getItem('pro_scan_ultimo')||'null'); }catch(e){}
   if(!saved || !saved.resultados){
-    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Ainda sem scan feito. Corre sozinho todos os domingos às 20h (com a notificação ativa), ou testa já:</div>'+botaoManual;
+    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Ainda sem scan feito. Corre sozinho todos os domingos às 20h (com a notificação ativa), ou testa já com o botão abaixo:</div>';
     return;
   }
   if(!saved.resultados.length){
-    el.innerHTML = '<div style="font-size:0.46rem;color:var(--dim2);">Nenhum padrão novo com sinal real encontrado esta semana ('+new Date(saved.ts).toLocaleDateString('pt-BR')+').</div>'+botaoManual;
+    el.innerHTML = '<div style="font-size:0.46rem;color:var(--dim2);">Nenhum padrão novo com sinal real encontrado esta semana ('+new Date(saved.ts).toLocaleDateString('pt-BR')+').</div>';
     return;
   }
   let html = '<div style="font-size:0.42rem;color:var(--dim2);margin-bottom:6px;">Scan de '+new Date(saved.ts).toLocaleDateString('pt-BR')+':</div>';
@@ -15612,7 +15614,6 @@ function renderScanSemanal(){
       +r.pct.toFixed(1)+'% vs '+r.pctBase.toFixed(1)+'% geral (z='+r.z.toFixed(2)+', n='+r.n+')'
       +'</div>';
   });
-  html += botaoManual;
   el.innerHTML = html;
 }
 function toggleNotifScanSemanal(){
