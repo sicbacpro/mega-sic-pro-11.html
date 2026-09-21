@@ -452,13 +452,16 @@ textarea:focus{border-color:var(--green)!important;}
 </head>
 <body>
 
+<!-- TOAST (avisos rápidos) -->
+<div id="toast" class="toast"></div>
+
 <!-- ═══ ECRÃ DE PIN ═══ -->
 <div id="pin-screen" style="position:fixed;inset:0;z-index:99999;background:#07090a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;">
   <div style="text-align:center;margin-bottom:30px;">
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-138</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-139</div>
   </div>
 
   <!-- Display PIN -->
@@ -3796,6 +3799,7 @@ if(!S.sound){ document.getElementById('sound-btn').textContent='🔕'; document.
 let toastTimer=null;
 function showToast(msg,type='green'){
   const el=document.getElementById('toast');
+  if(!el) { console.warn('Elemento #toast não encontrado — aviso:', msg); return; }
   el.textContent=msg; el.className=`toast show ${type}`;
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.className='toast',3000);
