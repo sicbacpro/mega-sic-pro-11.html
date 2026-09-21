@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-139</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-140</div>
   </div>
 
   <!-- Display PIN -->
@@ -763,9 +763,6 @@ textarea:focus{border-color:var(--green)!important;}
 
   <!-- QQ SCORE (Quadra, dedicado) -->
   <div id="dash-qq-score"></div>
-
-  <!-- MINUTOS QUENTES -->
-  <div id="dash-minutos-quentes" style="display:none;"></div>
 
   <!-- MARE DO JOGO -->
   <div id="dash-mare" style="margin-bottom:10px;"></div>
@@ -15860,6 +15857,7 @@ function minProximoQuente(){
 //  ANALISE TEMPORAL DE HORAS
 // =====================================================
 let horaFiltroTipo = 'combinado'; // combinado | triplo | quadra
+function setHoraFiltroTipo(v){ horaFiltroTipo=v; horaMapaHoras(); }
 let _horaUltimoAlerta = null;
 let horaExtratoTipo = 'combinado'; // combinado | triplo | quadra
 
