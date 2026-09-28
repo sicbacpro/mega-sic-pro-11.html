@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-143</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-145</div>
   </div>
 
   <!-- Display PIN -->
@@ -1073,14 +1073,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="t-analise-profunda" style="padding:8px;"></div>
   </div>
 
-  <!-- O QUE VEM DEPOIS DO TRIPLO? -->
-  <div class="card" style="border-color:#1a4a2a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#1a4a2a;">
-      <div class="ci" style="background:#041208;">➡️</div>
-      <div><div class="ct" style="color:var(--green);">O Que Vem Depois do Triplo?</div><div class="cs">Em que posição costuma sair uma Quadra — e como muda em horas secas</div></div>
-    </div>
-    <div id="depois-triplo" style="padding:8px;"></div>
-  </div>
 
   <!-- DISTÂNCIA ATÉ AO PADRÃO -->
   <div class="card" style="border-color:#1a4a2a;margin-bottom:10px;">
@@ -1398,14 +1390,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="q-confianca" style="padding:8px;"></div>
   </div>
 
-  <!-- O QUE VEM DEPOIS DA QUADRA? -->
-  <div class="card gold-card" style="margin-bottom:10px;">
-    <div class="ch" style="border-color:#3a2a08;">
-      <div class="ci" style="background:#1a1004;">➡️</div>
-      <div><div class="ct" style="color:var(--gold);">O Que Vem Depois da Quadra?</div><div class="cs">Em que posição costuma sair um Triplo — e como muda em horas secas</div></div>
-    </div>
-    <div id="depois-quadra" style="padding:8px;"></div>
-  </div>
 </div>
 
 <!-- ────────────── DUPLOS ────────────── -->
@@ -2885,6 +2869,21 @@ textarea:focus{border-color:var(--green)!important;}
     <div class="bwrap"><button class="btn btn-green" onclick="calcularBanca()">🏦 Calcular Gestão de Banca</button></div>
   </div>
 
+  <!-- META DE LUCRO -->
+  <div class="card" style="border-color:#3a2a08;">
+    <div class="ch" style="border-color:#3a2a08;">
+      <div class="ci" style="background:#1a1004;font-size:1rem;">🎯</div>
+      <div><div class="ct" style="color:var(--gold);">Meta de Lucro</div><div class="cs">Acumula todas as sessões do dia e da semana</div></div>
+    </div>
+    <div class="form-grid fg2">
+      <div class="ff"><label>Meta do dia (Kz)</label><input type="number" id="b-meta-dia" placeholder="ex: 20000" style="font-size:0.82rem;"></div>
+      <div class="ff"><label>Meta da semana (Kz)</label><input type="number" id="b-meta-sem" placeholder="ex: 100000" style="font-size:0.82rem;"></div>
+    </div>
+    <div class="bwrap"><button class="btn btn-sm" style="background:transparent;border:1px solid var(--gold)66;color:var(--gold);" onclick="guardarBancaMeta()">Guardar metas</button></div>
+    <div id="b-meta-prog" style="padding:10px 12px 12px;"></div>
+    <div id="b-meta-banner" style="display:none;margin:0 12px 12px;background:#0a1a0a;border:1px solid var(--green)66;border-radius:9px;padding:10px;text-align:center;font-size:0.58rem;color:var(--green);line-height:1.5;"></div>
+  </div>
+
   <!-- RESULTADO -->
   <div id="banca-resultado" style="display:none;">
 
@@ -3414,6 +3413,16 @@ let bancaSessoesHist = (() => {
   try { return JSON.parse(localStorage.getItem('pro_banca_sessoes')||'[]'); } catch(e){ return []; }
 })();
 const saveBancaSessoesHist = () => { try{ localStorage.setItem('pro_banca_sessoes', JSON.stringify(bancaSessoesHist)); }catch(e){} };
+
+// Banca — meta de lucro (Kz) e lucro acumulado por dia
+let bancaMeta = (() => {
+  try { const m = JSON.parse(localStorage.getItem('pro_banca_meta')||'null'); return m && typeof m==='object' ? {dia:+m.dia||0, semana:+m.semana||0} : {dia:0, semana:0}; } catch(e){ return {dia:0, semana:0}; }
+})();
+const saveBancaMeta = () => { try{ localStorage.setItem('pro_banca_meta', JSON.stringify(bancaMeta)); }catch(e){} };
+let bancaDias = (() => {
+  try { const d = JSON.parse(localStorage.getItem('pro_banca_dias')||'{}'); return d && typeof d==='object' ? d : {}; } catch(e){ return {}; }
+})();
+const saveBancaDias = () => { try{ localStorage.setItem('pro_banca_dias', JSON.stringify(bancaDias)); }catch(e){} };
 
 // Meta state
 let metaState = JSON.parse(localStorage.getItem('pro_meta')||'{"triplos":20,"quadras":3}');
@@ -4191,14 +4200,12 @@ const FAV_CARDS = [
   {key:'t-situacao', label:'🎲 Situação (Triplo)', page:'triplos'},
   {key:'q-situacao', label:'🎲 Situação (Quadra)', page:'quadras'},
   {key:'t-confianca', label:'🎯 Confiança (Triplo)', page:'triplos'},
-  {key:'q-confianca', label:'🎯 Confiança (Quadra)', page:'quadras'},
-  {key:'depois-quadra', label:'➡️ Depois da Quadra', page:'quadras'},
-  {key:'depois-triplo', label:'➡️ Depois do Triplo', page:'triplos'}
+  {key:'q-confianca', label:'🎯 Confiança (Quadra)', page:'quadras'}
 ];
 const FAV_MAX = 4;
 
 function getFavoritos(){
-  try{ return JSON.parse(localStorage.getItem('pro_favoritos')||'[]'); }catch(e){ return []; }
+  try{ const f = JSON.parse(localStorage.getItem('pro_favoritos')||'[]'); return f.filter(function(k){ return FAV_CARDS.some(function(c){return c.key===k;}); }); }catch(e){ return []; }
 }
 function setFavoritos(arr){
   try{ localStorage.setItem('pro_favoritos', JSON.stringify(arr)); }catch(e){}
@@ -5155,7 +5162,7 @@ function exportJSON(){
   const data={
     triplos:S.triplos, quadras:S.quadras, duplos:S.duplos,
     fin:S.fin, sessoes:S.sessoes, rodadas:S.rodadas,
-    cores:coresState, meta:metaState, banca:bancaState,
+    cores:coresState, meta:metaState, banca:bancaState, bancaMeta:bancaMeta, bancaDias:bancaDias, bancaSessoes:bancaSessoesHist,
     ia:iaState, conquistas:conquistasDesbloqueadas, planos:planos,
     sniperLog:(typeof sniperLog!=='undefined'?sniperLog:[]),
     sniperCalls:(typeof sniperCalls!=='undefined'?sniperCalls:[]),
@@ -5407,6 +5414,9 @@ function importarJSON(event){
           if(data.cores && (!coresState || Object.keys(coresState).length===0)){ coresState=data.cores; saveCores(); }
           if(data.meta && (!metaState || Object.keys(metaState).length===0)){ metaState=data.meta; saveMeta(); }
           if(data.banca && (!bancaState || Object.keys(bancaState).length===0)){ bancaState=data.banca; saveBanca(); }
+          if(data.bancaMeta && !bancaMeta.dia && !bancaMeta.semana){ bancaMeta={dia:+data.bancaMeta.dia||0, semana:+data.bancaMeta.semana||0}; saveBancaMeta(); }
+          if(data.bancaDias && typeof data.bancaDias==='object'){ Object.keys(data.bancaDias).forEach(k=>{ if(!bancaDias[k]) bancaDias[k]=data.bancaDias[k]; }); saveBancaDias(); }
+          if(Array.isArray(data.bancaSessoes) && !bancaSessoesHist.length){ bancaSessoesHist=data.bancaSessoes; saveBancaSessoesHist(); }
           if(data.ia && (!iaState || Object.keys(iaState).length===0)){ iaState=data.ia; saveIA(); }
           if(data.planos && (!planos || planos.length===0)){ planos=data.planos; savePlanos(); }
 
@@ -6265,7 +6275,10 @@ function registarJogada(){
     descricao = 'Perdeu';
   }
 
+  const _antes = bancaState.atual;
+  const _hojeAntes = _lucroHojeBanca(), _semAntes = _lucroSemanaBanca();
   bancaState.atual = Math.max(0, bancaState.atual + delta);
+  _registarDiaBanca(bancaState.atual - _antes);
   bancaState.jogadas.unshift({ hora, res, val, mult, delta, bancaApos: bancaState.atual, descricao });
   if(bancaState.jogadas.length > 50) bancaState.jogadas = bancaState.jogadas.slice(0, 50);
   saveBanca();
@@ -6274,6 +6287,7 @@ function registarJogada(){
   showToast(`${delta>=0?'✅':'❌'} ${delta>=0?'+':''}${fmtKz(delta)}`, cor);
   if(delta >= 0) playBeep(660, 0.1); else playBeep(300, 0.15, 'sawtooth', 0.2);
   renderBanca();
+  _verificarMetasBanca(_hojeAntes, _semAntes);
 }
 
 function renderBancaHist(){
@@ -6327,6 +6341,83 @@ function renderBancaHist(){
       <span style="font-family:var(--font-mono);font-size:0.6rem;font-weight:700;color:${j.delta>=0?'var(--green)':'var(--red)'};">${j.delta>=0?'+':''}${fmtKz(j.delta)}</span>
       <span style="font-family:var(--font-mono);font-size:0.52rem;color:var(--dim2);min-width:70px;text-align:right;">${fmtKz(j.bancaApos)}</span>
     </div>`).join('');
+}
+
+// ── Meta de lucro ─────────────────────────────
+function _diaKeyBanca(d){ d=d||new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function _registarDiaBanca(deltaReal){
+  const k = _diaKeyBanca();
+  const r = bancaDias[k] || {lucro:0, jogadas:0};
+  r.lucro += deltaReal; r.jogadas += 1;
+  bancaDias[k] = r;
+  const chaves = Object.keys(bancaDias).sort();
+  if(chaves.length > 120) chaves.slice(0, chaves.length-120).forEach(c=>delete bancaDias[c]);
+  saveBancaDias();
+}
+function _lucroHojeBanca(){ const r = bancaDias[_diaKeyBanca()]; return r ? r.lucro : 0; }
+function _lucroSemanaBanca(){
+  const n = new Date(), dow = (n.getDay()+6)%7; // segunda = 0
+  let t = 0;
+  for(let i=0;i<=dow;i++){
+    const r = bancaDias[_diaKeyBanca(new Date(n.getFullYear(), n.getMonth(), n.getDate()-i))];
+    if(r) t += r.lucro;
+  }
+  return t;
+}
+function guardarBancaMeta(){
+  const d = parseFloat(document.getElementById('b-meta-dia').value)||0;
+  const w = parseFloat(document.getElementById('b-meta-sem').value)||0;
+  if(d<0 || w<0){ showToast('⚠ Valores inválidos','red'); return; }
+  bancaMeta = {dia:d, semana:w};
+  saveBancaMeta();
+  renderBancaMeta();
+  showToast('🎯 Metas guardadas!','green');
+}
+function _verificarMetasBanca(hojeAntes, semAntes){
+  const hoje = _lucroHojeBanca(), sem = _lucroSemanaBanca();
+  if(bancaMeta.dia>0 && hojeAntes<bancaMeta.dia && hoje>=bancaMeta.dia){
+    setTimeout(()=>{ showToast('🎯 Meta do dia atingida! Fecha a sessão no verde.','green'); playBeep(880,0.2); },1600);
+  } else if(bancaMeta.semana>0 && semAntes<bancaMeta.semana && sem>=bancaMeta.semana){
+    setTimeout(()=>{ showToast('🏆 Meta da semana atingida!','green'); playBeep(880,0.2); },1600);
+  }
+}
+function renderBancaMeta(){
+  const el = document.getElementById('b-meta-prog');
+  if(!el) return;
+  const inD = document.getElementById('b-meta-dia'), inW = document.getElementById('b-meta-sem');
+  if(inD && document.activeElement!==inD && bancaMeta.dia) inD.value = bancaMeta.dia;
+  if(inW && document.activeElement!==inW && bancaMeta.semana) inW.value = bancaMeta.semana;
+
+  const hoje = _lucroHojeBanca(), sem = _lucroSemanaBanca();
+  const sg = v => (v>=0?'+':'−')+fmtKz(v);
+  function linha(titulo, lucro, meta){
+    const pct = meta>0 ? Math.max(0, Math.min(100, Math.round(lucro/meta*100))) : 0;
+    const cor = lucro>=0 ? 'var(--green)' : 'var(--red)';
+    const atingida = meta>0 && lucro>=meta;
+    const info = meta>0
+      ? (atingida ? '✅ atingida' : 'faltam '+fmtKz(meta-lucro))
+      : 'sem meta definida';
+    return '<div style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:0.52rem;color:var(--dim2);margin-bottom:4px;">'
+        +'<span style="text-transform:uppercase;letter-spacing:0.1em;">'+titulo+'</span>'
+        +'<span style="font-family:var(--font-mono);font-size:0.66rem;font-weight:700;color:'+cor+';">'+sg(lucro)+(meta>0?' <span style="color:var(--dim2);font-weight:400;">/ '+fmtKz(meta)+'</span>':'')+'</span>'
+      +'</div>'
+      +'<div style="height:8px;background:var(--border);border-radius:5px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;border-radius:5px;background:'+(atingida?'var(--green)':'var(--gold)')+';transition:width 0.5s;"></div></div>'
+      +'<div style="font-size:0.46rem;color:var(--dim2);margin-top:3px;">'+(meta>0?pct+'% · ':'')+info+'</div>'
+      +'</div>';
+  }
+  el.innerHTML = linha('Hoje', hoje, bancaMeta.dia) + linha('Esta semana', sem, bancaMeta.semana);
+
+  const banner = document.getElementById('b-meta-banner');
+  if(banner){
+    if(bancaMeta.dia>0 && hoje>=bancaMeta.dia){
+      banner.style.display='block';
+      banner.innerHTML = '🎯 <b>Meta do dia atingida!</b><br>Considera fechar a sessão no verde — o lucro de hoje já está garantido.';
+    } else if(bancaMeta.semana>0 && sem>=bancaMeta.semana){
+      banner.style.display='block';
+      banner.innerHTML = '🏆 <b>Meta da semana atingida!</b>';
+    } else banner.style.display='none';
+  }
 }
 
 function resetBanca(){
@@ -7901,193 +7992,6 @@ function renderSituacaoMomento(arr, elId, cor, singular, plural){
 // ══════════════════════════════════════════════
 //  O QUE VEM DEPOIS DA QUADRA? (posição/"casa" do Triplo seguinte)
 // ══════════════════════════════════════════════
-function renderDepoisQuadra(){
-  const el = document.getElementById('depois-quadra');
-  if(!el) return;
-
-  const combinado = [];
-  S.triplos.forEach(function(t){ if(t.ts&&t.hora) combinado.push({ts:t.ts,hora:t.hora,tipo:'T'}); });
-  S.quadras.forEach(function(q){ if(q.ts&&q.hora) combinado.push({ts:q.ts,hora:q.hora,tipo:'Q'}); });
-  combinado.sort(function(a,b){ return a.ts-b.ts; }); // ascendente: mais antigo primeiro
-
-  const quadrasIdx = [];
-  combinado.forEach(function(e,i){ if(e.tipo==='Q') quadrasIdx.push(i); });
-
-  if(quadrasIdx.length<5){
-    el.innerHTML = '<div class="empty">Precisas de pelo menos 5 quadras registadas (com hora) para esta análise.</div>';
-    return;
-  }
-
-  const MAXOFFSET = 4;
-
-  // Frequência de triplos por hora, para classificar quente/seca
-  const freqHoraTriplo = {};
-  S.triplos.forEach(function(t){ if(t.hora){ const h=parseInt(t.hora.split(':')[0]); freqHoraTriplo[h]=(freqHoraTriplo[h]||0)+1; } });
-  const valoresFreq = Object.values(freqHoraTriplo);
-  const mediaFreq = valoresFreq.length ? valoresFreq.reduce(function(a,b){return a+b;},0)/valoresFreq.length : 0;
-
-  function classificarHora(hora){
-    if(!hora) return 'seca';
-    const h = parseInt(hora.split(':')[0]);
-    const f = freqHoraTriplo[h]||0;
-    return f>=mediaFreq ? 'quente' : 'seca';
-  }
-
-  const cont = { todas:Array(MAXOFFSET+1).fill(0), quente:Array(MAXOFFSET+1).fill(0), seca:Array(MAXOFFSET+1).fill(0) };
-  const totalGrupo = { todas:0, quente:0, seca:0 };
-
-  quadrasIdx.forEach(function(qi){
-    const grupo = classificarHora(combinado[qi].hora);
-    totalGrupo.todas++;
-    totalGrupo[grupo]++;
-    for(let offset=1; offset<=MAXOFFSET; offset++){
-      const alvo = combinado[qi+offset];
-      if(!alvo) break;
-      if(alvo.tipo==='T'){
-        cont.todas[offset]++;
-        cont[grupo][offset]++;
-      }
-    }
-  });
-
-  function pct(grupo, offset){
-    return totalGrupo[grupo] ? Math.round((cont[grupo][offset]/totalGrupo[grupo])*100) : 0;
-  }
-
-  let melhorOffset=1, melhorPct=-1;
-  for(let o=1;o<=MAXOFFSET;o++){
-    const p = pct('todas', o);
-    if(p>melhorPct){ melhorPct=p; melhorOffset=o; }
-  }
-
-  function barraOffset(offset){
-    const pTodas = pct('todas',offset);
-    const pQuente = pct('quente',offset);
-    const pSeca = pct('seca',offset);
-    const destaque = offset===melhorOffset;
-    return '<div style="margin-bottom:8px;'+(destaque?'background:#fbbf2411;border:1px solid #fbbf2444;border-radius:8px;padding:6px 8px;':'')+'">'
-      +'<div style="display:flex;justify-content:space-between;font-size:0.46rem;color:var(--dim2);margin-bottom:3px;">'
-        +'<span>'+(destaque?'⭐ ':'')+'Casa '+offset+' depois da Quadra</span>'
-        +'<span style="color:var(--text);font-weight:700;">'+pTodas+'%</span>'
-      +'</div>'
-      +'<div style="display:flex;gap:8px;align-items:center;">'
-        +'<div style="flex:1;">'
-        +'<div style="font-size:0.38rem;color:#ef4444;margin-bottom:1px;">🔥 Quente: '+pQuente+'%</div>'
-        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pQuente+'%;height:100%;background:#ef4444;"></div></div>'
-        +'</div>'
-        +'<div style="flex:1;">'
-        +'<div style="font-size:0.38rem;color:#38bdf8;margin-bottom:1px;">❄️ Seca: '+pSeca+'%</div>'
-        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pSeca+'%;height:100%;background:#38bdf8;"></div></div>'
-        +'</div>'
-      +'</div>'
-      +'</div>';
-  }
-
-  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:10px;">Baseado em <b style="color:var(--text);">'+totalGrupo.todas+' quadras</b> ('+totalGrupo.quente+' em horas quentes de Triplo, '+totalGrupo.seca+' em horas secas)</div>';
-  for(let o=1;o<=MAXOFFSET;o++){ html += barraOffset(o); }
-
-  html += '<div style="background:var(--card2);border-radius:8px;padding:8px 10px;font-size:0.48rem;color:var(--text);line-height:1.6;margin-top:6px;">'
-    + '💡 No teu histórico, a Casa '+melhorOffset+' é onde mais aparece um Triplo depois de uma Quadra ('+melhorPct+'%). '
-    + 'Em horas secas de Triplo, essa taxa cai para <b style="color:#38bdf8;">'+pct('seca',melhorOffset)+'%</b> (vs <b style="color:#ef4444;">'+pct('quente',melhorOffset)+'%</b> em horas quentes).'
-    + '</div>'
-    +'<div class="disclaimer" style="margin-top:8px;">⚠ Estatística sobre o teu histórico — cada rodada continua independente e aleatória, não é garantia do próximo resultado.</div>';
-
-  el.innerHTML = html;
-}
-
-function renderDepoisTriplo(){
-  const el = document.getElementById('depois-triplo');
-  if(!el) return;
-
-  const combinado = [];
-  S.triplos.forEach(function(t){ if(t.ts&&t.hora) combinado.push({ts:t.ts,hora:t.hora,tipo:'T'}); });
-  S.quadras.forEach(function(q){ if(q.ts&&q.hora) combinado.push({ts:q.ts,hora:q.hora,tipo:'Q'}); });
-  combinado.sort(function(a,b){ return a.ts-b.ts; }); // ascendente: mais antigo primeiro
-
-  const triplosIdx = [];
-  combinado.forEach(function(e,i){ if(e.tipo==='T') triplosIdx.push(i); });
-
-  if(triplosIdx.length<5){
-    el.innerHTML = '<div class="empty">Precisas de pelo menos 5 triplos registados (com hora) para esta análise.</div>';
-    return;
-  }
-
-  const MAXOFFSET = 4;
-
-  // Frequência de quadras por hora, para classificar quente/seca
-  const freqHoraQuadra = {};
-  S.quadras.forEach(function(q){ if(q.hora){ const h=parseInt(q.hora.split(':')[0]); freqHoraQuadra[h]=(freqHoraQuadra[h]||0)+1; } });
-  const valoresFreq = Object.values(freqHoraQuadra);
-  const mediaFreq = valoresFreq.length ? valoresFreq.reduce(function(a,b){return a+b;},0)/valoresFreq.length : 0;
-
-  function classificarHora(hora){
-    if(!hora) return 'seca';
-    const h = parseInt(hora.split(':')[0]);
-    const f = freqHoraQuadra[h]||0;
-    return f>=mediaFreq ? 'quente' : 'seca';
-  }
-
-  const cont = { todas:Array(MAXOFFSET+1).fill(0), quente:Array(MAXOFFSET+1).fill(0), seca:Array(MAXOFFSET+1).fill(0) };
-  const totalGrupo = { todas:0, quente:0, seca:0 };
-
-  triplosIdx.forEach(function(ti){
-    const grupo = classificarHora(combinado[ti].hora);
-    totalGrupo.todas++;
-    totalGrupo[grupo]++;
-    for(let offset=1; offset<=MAXOFFSET; offset++){
-      const alvo = combinado[ti+offset];
-      if(!alvo) break;
-      if(alvo.tipo==='Q'){
-        cont.todas[offset]++;
-        cont[grupo][offset]++;
-      }
-    }
-  });
-
-  function pct(grupo, offset){
-    return totalGrupo[grupo] ? Math.round((cont[grupo][offset]/totalGrupo[grupo])*100) : 0;
-  }
-
-  let melhorOffset=1, melhorPct=-1;
-  for(let o=1;o<=MAXOFFSET;o++){
-    const p = pct('todas', o);
-    if(p>melhorPct){ melhorPct=p; melhorOffset=o; }
-  }
-
-  function barraOffset(offset){
-    const pTodas = pct('todas',offset);
-    const pQuente = pct('quente',offset);
-    const pSeca = pct('seca',offset);
-    const destaque = offset===melhorOffset;
-    return '<div style="margin-bottom:8px;'+(destaque?'background:#4ade8011;border:1px solid #4ade8044;border-radius:8px;padding:6px 8px;':'')+'">'
-      +'<div style="display:flex;justify-content:space-between;font-size:0.46rem;color:var(--dim2);margin-bottom:3px;">'
-        +'<span>'+(destaque?'⭐ ':'')+'Casa '+offset+' depois do Triplo</span>'
-        +'<span style="color:var(--text);font-weight:700;">'+pTodas+'%</span>'
-      +'</div>'
-      +'<div style="display:flex;gap:8px;align-items:center;">'
-        +'<div style="flex:1;">'
-        +'<div style="font-size:0.38rem;color:#ef4444;margin-bottom:1px;">🔥 Quente: '+pQuente+'%</div>'
-        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pQuente+'%;height:100%;background:#ef4444;"></div></div>'
-        +'</div>'
-        +'<div style="flex:1;">'
-        +'<div style="font-size:0.38rem;color:#38bdf8;margin-bottom:1px;">❄️ Seca: '+pSeca+'%</div>'
-        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pSeca+'%;height:100%;background:#38bdf8;"></div></div>'
-        +'</div>'
-      +'</div>'
-      +'</div>';
-  }
-
-  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:10px;">Baseado em <b style="color:var(--text);">'+totalGrupo.todas+' triplos</b> ('+totalGrupo.quente+' em horas quentes de Quadra, '+totalGrupo.seca+' em horas secas)</div>';
-  for(let o=1;o<=MAXOFFSET;o++){ html += barraOffset(o); }
-
-  html += '<div style="background:var(--card2);border-radius:8px;padding:8px 10px;font-size:0.48rem;color:var(--text);line-height:1.6;margin-top:6px;">'
-    + '💡 No teu histórico, a Casa '+melhorOffset+' é onde mais aparece uma Quadra depois de um Triplo ('+melhorPct+'%). '
-    + 'Em horas secas de Quadra, essa taxa cai para <b style="color:#38bdf8;">'+pct('seca',melhorOffset)+'%</b> (vs <b style="color:#ef4444;">'+pct('quente',melhorOffset)+'%</b> em horas quentes).'
-    + '</div>'
-    +'<div class="disclaimer" style="margin-top:8px;">⚠ Estatística sobre o teu histórico — cada rodada continua independente e aleatória, não é garantia do próximo resultado.</div>';
-
-  el.innerHTML = html;
-}
 let _mascoteUltimaInteracao = Date.now();
 let _mascoteCelebrando = false;
 let _mascoteEstadoAnterior = null;
@@ -8205,8 +8109,6 @@ renderQuadras = function(){
   safeRun(function(){ renderMapaCalorHoraMinuto(S.quadras,'q-mapa-hm','#fbbf24','quadras'); },'renderMapaCalorHoraMinuto-q');
   safeRun(function(){ renderConfiancaPadrao(S.quadras,'q-confianca','#fbbf24','quadras'); },'renderConfiancaPadrao-q');
   safeRun(function(){ renderSituacaoMomento(S.quadras,'q-situacao','#fbbf24','Quadra','quadras'); },'renderSituacaoMomento-q');
-  safeRun(renderDepoisQuadra,'renderDepoisQuadra');
-  safeRun(renderDepoisTriplo,'renderDepoisTriplo');
 };
 
 
@@ -19056,7 +18958,7 @@ function renderAll(){
   safeRun(renderPrevisao,'renderPrevisao');
   safeRun(renderTurboHist,'renderTurboHist');
   safeRun(renderMapaSequencias,'renderMapaSequencias');
-  safeRun(renderObjetivos,'renderObjetivos');  safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca');
+  safeRun(renderObjetivos,'renderObjetivos');  safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca'); safeRun(renderBancaMeta,'renderBancaMeta');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
 function verificacoesLeves(){
