@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-140</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-143</div>
   </div>
 
   <!-- Display PIN -->
@@ -1071,6 +1071,15 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--green);">Análise Profunda</div><div class="cs">Número quente · Intervalo · Sequências</div></div>
     </div>
     <div id="t-analise-profunda" style="padding:8px;"></div>
+  </div>
+
+  <!-- O QUE VEM DEPOIS DO TRIPLO? -->
+  <div class="card" style="border-color:#1a4a2a;margin-bottom:10px;">
+    <div class="ch" style="border-color:#1a4a2a;">
+      <div class="ci" style="background:#041208;">➡️</div>
+      <div><div class="ct" style="color:var(--green);">O Que Vem Depois do Triplo?</div><div class="cs">Em que posição costuma sair uma Quadra — e como muda em horas secas</div></div>
+    </div>
+    <div id="depois-triplo" style="padding:8px;"></div>
   </div>
 
   <!-- DISTÂNCIA ATÉ AO PADRÃO -->
@@ -2948,18 +2957,30 @@ textarea:focus{border-color:var(--green)!important;}
           <label>Multiplicador</label>
           <select id="b-jogada-mult">
             <option value="1">1x (normal)</option>
+            <option value="2">2x (duplo)</option>
             <option value="24">24x (triplo)</option>
             <option value="180">180x (quadra)</option>
           </select>
         </div>
       </div>
-      <div class="bwrap"><button class="btn btn-green" onclick="registarJogada()">+ Registar Jogada</button></div>
+      <div class="bwrap"><button class="btn btn-green" id="b-btn-registar" onclick="registarJogada()">+ Registar Jogada</button></div>
+      <div id="b-trava-aviso" style="display:none;background:#1a0808;border:1px solid var(--red)66;border-radius:9px;padding:10px;margin-top:8px;text-align:center;">
+        <div style="font-size:0.56rem;color:var(--red);margin-bottom:6px;">🔒 Registo bloqueado — limite atingido</div>
+        <button class="btn btn-sm" style="background:transparent;border:1px solid var(--red)66;color:var(--red);" onclick="desbloquearBanca()">Desbloquear mesmo assim</button>
+      </div>
     </div>
 
     <!-- HISTÓRICO BANCA -->
     <div class="card" style="margin-bottom:10px;">
       <div class="ch"><div class="ci" style="background:#0a0e10;">📋</div><div><div class="ct">Histórico da Sessão</div><div class="cs" id="b-hist-resumo">—</div></div></div>
+      <div id="b-hist-curva" style="padding:6px 10px 0;"></div>
       <div id="b-hist-list"><div class="empty">Sem jogadas ainda.</div></div>
+    </div>
+
+    <!-- SESSÕES ANTERIORES -->
+    <div class="card" style="margin-bottom:10px;">
+      <div class="ch"><div class="ci" style="background:#0a0e10;">🗂️</div><div><div class="ct">Sessões Anteriores</div><div class="cs">Fecham ao reiniciar a sessão</div></div></div>
+      <div id="b-sessoes-list"><div class="empty">Sem sessões encerradas ainda.</div></div>
     </div>
 
     <!-- ALERTAS -->
@@ -3239,9 +3260,6 @@ textarea:focus{border-color:var(--green)!important;}
       💡 A IA usa esta hora como referência para calcular a hora de cada triplo/quadra encontrado na imagem.
     </div>
   </div>
-
-  <!-- ═══ SECÇÃO CORES ═══ -->
-
 </div>
 
 <!-- ────────────── SNIPER MODE ────────────── -->
@@ -3383,13 +3401,19 @@ const savePlanos = () => localStorage.setItem('pro_planos', JSON.stringify(plano
 let bancaState = (() => {
   try {
     const saved = localStorage.getItem('pro_banca');
-    return saved ? JSON.parse(saved) : { inicial:0, entrada:0, sl:20, sw:50, atual:0, jogadas:[], configurada:false };
+    return saved ? JSON.parse(saved) : { inicial:0, entrada:0, sl:20, sw:50, atual:0, jogadas:[], configurada:false, travaLiberada:false };
   } catch(e) {
-    return { inicial:0, entrada:0, sl:20, sw:50, atual:0, jogadas:[], configurada:false };
+    return { inicial:0, entrada:0, sl:20, sw:50, atual:0, jogadas:[], configurada:false, travaLiberada:false };
   }
 })();
 const saveBanca = () => { try{ localStorage.setItem('pro_banca', JSON.stringify(bancaState)); }catch(e){} };
 const fmtKz = v => Math.abs(Math.round(v)).toLocaleString('pt-AO') + ' Kz';
+
+// Banca — histórico de sessões encerradas
+let bancaSessoesHist = (() => {
+  try { return JSON.parse(localStorage.getItem('pro_banca_sessoes')||'[]'); } catch(e){ return []; }
+})();
+const saveBancaSessoesHist = () => { try{ localStorage.setItem('pro_banca_sessoes', JSON.stringify(bancaSessoesHist)); }catch(e){} };
 
 // Meta state
 let metaState = JSON.parse(localStorage.getItem('pro_meta')||'{"triplos":20,"quadras":3}');
@@ -4168,7 +4192,8 @@ const FAV_CARDS = [
   {key:'q-situacao', label:'🎲 Situação (Quadra)', page:'quadras'},
   {key:'t-confianca', label:'🎯 Confiança (Triplo)', page:'triplos'},
   {key:'q-confianca', label:'🎯 Confiança (Quadra)', page:'quadras'},
-  {key:'depois-quadra', label:'➡️ Depois da Quadra', page:'quadras'}
+  {key:'depois-quadra', label:'➡️ Depois da Quadra', page:'quadras'},
+  {key:'depois-triplo', label:'➡️ Depois do Triplo', page:'triplos'}
 ];
 const FAV_MAX = 4;
 
@@ -4319,25 +4344,6 @@ function classifyDice(dice){
   if(pairs.length===1) return{type:'PAR',pairs,isDuplo:false};
   return{type:'NORMAL',pairs:[]};
 }
-function addDuplo(){
-  const vals=['d-d1','d-d2','d-d3','d-d4'].map(id=>parseInt(document.getElementById(id).value));
-  const hora=document.getElementById('d-hora').value;
-  const gn=parseFloat(document.getElementById('d-gn').value)||0;
-  if(vals.some(v=>isNaN(v)||v<1||v>6)||!hora){ showToast('⚠ Preenche os 4 dados e hora!','red'); return; }
-  const r=classifyDice(vals);
-  if(!r.pairs.length){ showToast('⚠ Nenhum par detetado!','red'); return; }
-  const prev=S.duplos[0];
-  const interval=prev?calcIntervalMin(hora,prev.hora):null;
-  S.duplos.unshift({hora,dice:vals,type:r.type,pairs:r.pairs,isDuplo:r.isDuplo||false,gn,interval,ts:Date.now()});
-  save('duplos');
-  ['d-d1','d-d2','d-d3','d-d4','d-gn'].forEach(id=>document.getElementById(id).value='');
-  setNow('d-hora');
-  detectDup();
-  playBeep(560,0.12,'sine',0.25);
-  showToast(r.type==='DUPLO PAR'?'🟣 Duplo Par registado!':'🟣 Par Simples registado!');
-  renderDuplos();
-}
-
 // ══════════════════════════════════════════════
 //  ADD FIN
 // ══════════════════════════════════════════════
@@ -4872,17 +4878,6 @@ function renderQuadras(){
 // ══════════════════════════════════════════════
 //  DUPLOS — MINI TAB SWITCH
 // ══════════════════════════════════════════════
-function switchMiniDup(tab, btn){
-  ['agora','hist','pad'].forEach(t=>{
-    const el=document.getElementById(`d-tab-${t}`);
-    if(el) el.style.display='none';
-  });
-  document.getElementById(`d-tab-${tab}`).style.display='block';
-  btn.closest('.mini-tabs').querySelectorAll('.mini-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  if(tab==='pad') renderDuplosPatterns();
-}
-
 // ══════════════════════════════════════════════
 //  RENDER DUPLOS
 // ══════════════════════════════════════════════
@@ -5353,111 +5348,6 @@ function erParseRodada(token){
   else if(maxCount === 2) tipo = 'duplo';
 
   return { dados: nums, cor, tipo, numDom, freq };
-}
-
-function erAnalisar(){
-  const raw = document.getElementById('er-input').value.trim();
-  if(!raw){ showToast('Cola as rodadas primeiro!','warn'); return; }
-
-  // Split por virgula ou espaco
-  const tokens = raw.split(/[\s,]+/).filter(t=>t.length>=5);
-  if(!tokens.length){ showToast('Nenhuma rodada reconhecida. Verifica o formato.','error'); return; }
-
-  const horaBase = document.getElementById('er-hora').value || '20:00';
-  const rpm = parseFloat(document.getElementById('er-rpm').value) || 2;
-  const minPerRodada = 1/rpm;
-
-  // Parse todos os tokens
-  // Rodada 0 (primeira no input) = mais recente = horaBase
-  // Rodadas seguintes = mais antigas = horaBase - N*minPerRodada
-  const rodadas = [];
-  let erros = 0;
-  const baseMin = toMin(horaBase);
-  tokens.forEach((t,i)=>{
-    const r = erParseRodada(t);
-    if(r){
-      const rodadaMin = baseMin - (i * minPerRodada);
-      const totalMinNorm = ((rodadaMin % 1440) + 1440) % 1440;
-      const h = Math.floor(totalMinNorm/60);
-      const m = Math.floor(totalMinNorm%60);
-      r.hora = pad(h)+':'+pad(m);
-      r.token = t;
-      rodadas.push(r);
-    } else {
-      erros++;
-    }
-  });
-
-  if(!rodadas.length){ showToast('Nenhuma rodada válida encontrada.','error'); return; }
-
-  // Guardar para importar depois
-  window._erRodadas = rodadas;
-
-  // Contar
-  const cntT = rodadas.filter(r=>r.tipo==='triplo').length;
-  const cntQ = rodadas.filter(r=>r.tipo==='quadra').length;
-  const cntD = rodadas.filter(r=>r.tipo==='duplo'||r.tipo==='duplopar').length;
-
-  const _ect=document.getElementById('er-cnt-t'); if(_ect) _ect.textContent=cntT;
-  const _ecq=document.getElementById('er-cnt-q'); if(_ecq) _ecq.textContent=cntQ;
-  const _ecd=document.getElementById('er-cnt-d'); if(_ecd) _ecd.textContent=cntD;
-
-  // Preview list
-  const listEl = document.getElementById('er-preview-list');
-  const corIcon = {azul:'\ud83d\udd35',vermelho:'\ud83d\udd34',verde:'\ud83d\udfe2'};
-  const tipoLabel = {triplo:'TRIPLO',quadra:'QUADRA',duplo:'DUPLO',duplopar:'DUPLO PAR',normal:''};
-  const tipoCss = {triplo:'var(--green)',quadra:'var(--gold)',duplo:'var(--purple)',duplopar:'var(--purple)',normal:'var(--dim2)'};
-
-  listEl.innerHTML = rodadas.map(r=>{
-    const icon = corIcon[r.cor]||'';
-    const label = tipoLabel[r.tipo]||'';
-    const cor = tipoCss[r.tipo]||'var(--dim2)';
-    const special = r.tipo!=='normal' ? '<span style="font-size:0.48rem;font-weight:700;color:'+cor+';margin-left:5px;">'+label+' '+r.numDom+'</span>' : '';
-    return '<div style="display:flex;align-items:center;gap:5px;padding:3px 4px;border-radius:5px;margin-bottom:2px;background:'+(r.tipo!=='normal'?cor+'11':'transparent')+';">'
-      +'<span style="font-size:0.48rem;color:var(--dim2);min-width:34px;font-family:var(--font-mono);">'+r.hora+'</span>'
-      +'<span>'+icon+'</span>'
-      +'<span style="font-family:var(--font-mono);font-size:0.52rem;color:var(--text);">'+r.dados.join('-')+'</span>'
-      +special+'</div>';
-  }).join('');
-
-  document.getElementById('er-preview').style.display = 'block';
-  document.getElementById('er-import-btn').style.display = 'inline-flex';
-
-  const msg = rodadas.length+' rodadas · '+cntT+'T '+cntQ+'Q '+cntD+'D'+(erros?' · '+erros+' erros':'');
-  const ultimaHora = rodadas.length ? rodadas[rodadas.length-1].hora : '??:??';
-  showToast(msg+' · mais antiga: '+ultimaHora, 'success');
-}
-
-function erImportar(){
-  const rodadas = window._erRodadas;
-  if(!rodadas||!rodadas.length){ showToast('Analisa primeiro!','warn'); return; }
-
-  let cntT=0, cntQ=0, cntD=0;
-
-  rodadas.forEach(r=>{
-    if(r.tipo==='triplo'){
-      S.triplos.push({ num:r.numDom, hora:r.hora, cor:r.cor, dados:r.dados, interval:null, nota:'' });
-      cntT++;
-    } else if(r.tipo==='quadra'){
-      S.quadras.push({ num:r.numDom, hora:r.hora, cor:r.cor, dados:r.dados, interval:null, nota:'' });
-      cntQ++;
-    } else if(r.tipo==='duplo'||r.tipo==='duplopar'){
-      const pairs = Object.keys(r.freq).filter(k=>r.freq[k]>=2).map(Number);
-      S.duplos.push({ hora:r.hora, cor:r.cor, dados:r.dados, pairs, interval:null, nota:'' });
-      cntD++;
-    }
-    coresState.unshift({ cor:r.cor, hora:r.hora, dados:r.dados });
-  });
-
-  save('triplos'); save('quadras'); save('duplos');
-  saveCores();
-  renderAll();
-
-  document.getElementById('er-input').value = '';
-  document.getElementById('er-preview').style.display = 'none';
-  window._erRodadas = null;
-
-  showToast('Importados: '+cntT+' triplos, '+cntQ+' quadras, '+cntD+' duplos!','success');
 }
 
 function chaveDedupe(item){
@@ -6072,27 +5962,6 @@ function showImportResults(data){
     document.getElementById('ai-summary').textContent +=
       ` · ${data.hora_primeira||'?'}→${data.hora_ultima||'?'}`;
   }
-
-  // Mostrar sequência de cores extraída
-  const coresTab = document.getElementById('cores-r');
-  if(coresTab){
-    const seq = data.sequencia_cores||[];
-    if(seq.length){
-      coresTab.innerHTML = `
-        <div style="padding:10px 12px;">
-          <div style="font-size:0.5rem;color:var(--dim2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">${seq.length} cores detetadas</div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
-            ${seq.map(c=>{
-              const info=COR_INFO[c]||{emoji:'⬜',cor:'var(--dim2)'};
-              return `<div style="width:22px;height:22px;border-radius:4px;background:${info.cor}22;border:1px solid ${info.cor}66;display:flex;align-items:center;justify-content:center;font-size:0.6rem;">${info.emoji}</div>`;
-            }).join('')}
-          </div>
-          <button class="btn btn-green btn-sm" onclick="importarCoresOCR(${JSON.stringify(seq).replace(/"/g,'&quot;')})">✅ Importar Sequência de Cores</button>
-        </div>`;
-    } else {
-      coresTab.innerHTML='<div class="empty">Sem sequência de cores detetada.</div>';
-    }
-  }
   playSuccess();
   showToast(`✅ IA encontrou ${total} resultados!`,'green');
 }
@@ -6149,20 +6018,6 @@ function importarTudo(){
   showToast(`✅ ${t.length} triplos + ${q.length} quadras + ${d.length} duplos importados!`+(duplicadosIgnorados?` (${duplicadosIgnorados} duplicados ignorados)`:''),'green');
   clearResults(); clearImage();
   renderAll();
-}
-
-function importarCoresOCR(seq){
-  seq.forEach((c,i)=>{
-    const ts = Date.now()-(i*30000);
-    const hora = new Date(ts);
-    coresState.unshift({cor:c, hora:`${pad(hora.getHours())}:${pad(hora.getMinutes())}`, ts});
-  });
-  if(coresState.length>500) coresState=coresState.slice(0,500);
-  saveCores();
-  renderCoresSeq();
-  renderCoresAnalise();
-  playSuccess();
-  showToast(`🎨 ${seq.length} cores importadas!`,'green');
 }
 
 function importarTriplosEQuadras(){
@@ -6224,74 +6079,6 @@ function clearResults(){
   document.getElementById('ai-results').style.display='none';
 }
 
-function importCSVManual(){
-  const text = document.getElementById('csv-manual').value.trim();
-  if(!text){ showToast('⚠ Sem dados para importar!','red'); return; }
-
-  // Pre-process: replace "DUPLO PAR," with "DD," to avoid comma split issue
-  const cleaned = text.replace(/DUPLO PAR,/gi, 'DD,').replace(/DUPLO,/gi,'DD,');
-  const lines = cleaned.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('Tipo')&&!l.startsWith('#'));
-  let ct=0, cq=0, cd=0, skip=0;
-
-  const registadoEmCsv = Date.now();
-  lines.forEach(line=>{
-    const parts = line.split(',').map(s=>s.trim());
-    if(parts.length < 3){ skip++; return; }
-    const tipo=(parts[0]||'').toUpperCase();
-    const hora=parts[1]||'20:00';
-    const val=(parts[2]||'').trim();
-
-    if(tipo==='TRIPLO'||tipo==='T'||tipo==='3X'){
-      const num=parseInt(val)||1;
-      if(num<1||num>6){ skip++; return; }
-      const prev=S.triplos[0];
-      const interval=prev?calcIntervalMin(hora,prev.hora):null;
-      S.triplos.unshift({hora,num,ap:0,gn:0,tipo:'TRIPLO',interval,ts:calcTsParaDia(importDiaEscolhido,hora),registadoEm:registadoEmCsv,imported:true});
-      ct++;
-
-    } else if(tipo==='QUADRA'||tipo==='QUAD'||tipo==='Q'||tipo==='4X'){
-      const num=parseInt(val)||1;
-      if(num<1||num>6){ skip++; return; }
-      const prev=S.quadras[0];
-      const interval=prev?calcIntervalMin(hora,prev.hora):null;
-      S.quadras.unshift({hora,num,ap:0,gn:0,interval,ts:calcTsParaDia(importDiaEscolhido,hora),registadoEm:registadoEmCsv,imported:true});
-      cq++;
-
-    } else if(tipo==='PAR'||tipo==='P'||tipo==='DD'||tipo==='DP'){
-      // Aceita: 2-2-4-6 ou 2,2,4,6 (se separado por hífen)
-      const raw = val.replace(/[^0-9]/g,'-');
-      const dice = raw.split('-').map(Number).filter(n=>n>=1&&n<=6);
-      if(dice.length!==4){ skip++; return; }
-      const c={};
-      dice.forEach(d=>c[d]=(c[d]||0)+1);
-      const pairs=Object.entries(c).filter(([,v])=>v>=2).map(([k])=>parseInt(k));
-      if(!pairs.length){ skip++; return; }
-      const isDuplo=pairs.length>=2;
-      const prev=S.duplos[0];
-      const interval=prev?calcIntervalMin(hora,prev.hora):null;
-      S.duplos.unshift({
-        hora, dice, pairs,
-        type: isDuplo?'DUPLO PAR':'PAR',
-        isDuplo, gn:0, interval,
-        ts:calcTsParaDia(importDiaEscolhido,hora), registadoEm:registadoEmCsv, imported:true
-      });
-      cd++;
-    } else {
-      skip++;
-    }
-  });
-
-  S.triplos.sort((a,b)=>toMin(b.hora)-toMin(a.hora));
-  S.quadras.sort((a,b)=>toMin(b.hora)-toMin(a.hora));
-  S.duplos.sort((a,b)=>toMin(b.hora)-toMin(a.hora));
-  save('triplos'); save('quadras'); save('duplos');
-  document.getElementById('csv-manual').value='';
-  playSuccess();
-  const msg = `✅ ${ct} triplos · ${cq} quadras · ${cd} duplos importados!` + (skip?` (${skip} ignorados)`:'');
-  showToast(msg,'green');
-  renderAll();
-}
-
 // ══════════════════════════════════════════════
 //  BANCA
 // ══════════════════════════════════════════════
@@ -6306,7 +6093,7 @@ function calcularBanca(){
   if(!entrada || entrada <= 0){ showToast('⚠ Indica o valor de entrada!','red'); return; }
   if(entrada >= inicial){ showToast('⚠ Entrada não pode ser maior que a banca!','red'); return; }
 
-  bancaState = { inicial, entrada, sl, sw, atual: inicial, jogadas: [], configurada: true };
+  bancaState = { inicial, entrada, sl, sw, atual: inicial, jogadas: [], configurada: true, travaLiberada: false };
   saveBanca();
   playSuccess();
 
@@ -6442,12 +6229,26 @@ function renderBanca(){
   if(alertSL) alertSL.style.display = atual <= slMin ? 'block' : 'none';
   if(alertSW) alertSW.style.display = atual >= swMax ? 'block' : 'none';
 
+  // Trava — bloqueia registo de jogadas quando o limite é atingido
+  const limiteAtingido = (atual <= slMin || atual >= swMax);
+  const bloqueado = limiteAtingido && !bancaState.travaLiberada;
+  const btnReg = document.getElementById('b-btn-registar');
+  const avisoTrava = document.getElementById('b-trava-aviso');
+  if(btnReg){ btnReg.disabled = bloqueado; btnReg.style.opacity = bloqueado ? '0.4' : '1'; btnReg.style.pointerEvents = bloqueado ? 'none' : 'auto'; }
+  if(avisoTrava) avisoTrava.style.display = bloqueado ? 'block' : 'none';
+
   // Histórico
   renderBancaHist();
+  renderBancaSessoes();
 }
 
 function registarJogada(){
   if(!bancaState.configurada){ showToast('⚠ Configura a banca primeiro!','red'); return; }
+  const slMinChk = bancaState.inicial - (bancaState.inicial*bancaState.sl/100);
+  const swMaxChk = bancaState.inicial + (bancaState.inicial*bancaState.sw/100);
+  if((bancaState.atual <= slMinChk || bancaState.atual >= swMaxChk) && !bancaState.travaLiberada){
+    showToast('🔒 Limite atingido — desbloqueia para continuar','red'); return;
+  }
   const res = document.getElementById('b-jogada-res').value;
   const val = parseFloat(document.getElementById('b-jogada-val').value) || bancaState.entrada;
   const mult = parseFloat(document.getElementById('b-jogada-mult').value);
@@ -6478,13 +6279,46 @@ function registarJogada(){
 function renderBancaHist(){
   const c = document.getElementById('b-hist-list');
   const r = document.getElementById('b-hist-resumo');
+  const curva = document.getElementById('b-hist-curva');
   const jogadas = bancaState.jogadas || [];
-  if(!jogadas.length){ if(c) c.innerHTML='<div class="empty">Sem jogadas ainda.</div>'; return; }
+  if(!jogadas.length){
+    if(c) c.innerHTML='<div class="empty">Sem jogadas ainda.</div>';
+    if(curva) curva.innerHTML='';
+    return;
+  }
 
   const ganhos = jogadas.filter(j=>j.delta>0).length;
   const perdas = jogadas.filter(j=>j.delta<0).length;
   const totalDelta = jogadas.reduce((a,j)=>a+j.delta,0);
-  if(r) r.textContent = `${jogadas.length} jogadas · ${ganhos}✅ ${perdas}❌ · ${totalDelta>=0?'+':''}${fmtKz(totalDelta)}`;
+  const taxaVitoria = (ganhos+perdas) ? Math.round(ganhos/(ganhos+perdas)*100) : 0;
+
+  // maior sequência de perdas seguidas (jogadas está em ordem mais-recente-primeiro, por isso percorremos ao contrário)
+  let maxSeqPerdas=0, seqAtual=0;
+  for(let i=jogadas.length-1;i>=0;i--){
+    if(jogadas[i].delta<0){ seqAtual++; maxSeqPerdas=Math.max(maxSeqPerdas,seqAtual); }
+    else seqAtual=0;
+  }
+
+  if(r) r.textContent = `${jogadas.length} jogadas · ${taxaVitoria}% vitória · maior seq. de perdas: ${maxSeqPerdas} · ${totalDelta>=0?'+':''}${fmtKz(totalDelta)}`;
+
+  // Curva da banca (SVG sparkline) — ordem cronológica (mais antiga primeiro)
+  if(curva){
+    const valores = jogadas.slice().reverse().map(j=>j.bancaApos);
+    valores.unshift(bancaState.inicial);
+    const min = Math.min(...valores), max = Math.max(...valores);
+    const w = 300, h = 46, pad = 3;
+    const range = (max-min) || 1;
+    const pts = valores.map((v,i)=>{
+      const x = pad + (i/(valores.length-1||1))*(w-pad*2);
+      const y = h-pad - ((v-min)/range)*(h-pad*2);
+      return x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+    const corLinha = totalDelta>=0 ? '#4ade80' : '#ef4444';
+    curva.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:46px;display:block;">
+      <polyline points="${pts}" fill="none" stroke="${corLinha}" stroke-width="1.6"/>
+      <line x1="${pad}" y1="${(h-pad-((bancaState.inicial-min)/range)*(h-pad*2)).toFixed(1)}" x2="${w-pad}" y2="${(h-pad-((bancaState.inicial-min)/range)*(h-pad*2)).toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>
+    </svg>`;
+  }
 
   if(c) c.innerHTML = jogadas.slice(0,30).map(j=>`
     <div class="hrow" style="${j.delta>=0?'background:#050e08;':'background:#0e0505;'}">
@@ -6497,12 +6331,55 @@ function renderBancaHist(){
 
 function resetBanca(){
   mostrarConfirmacao('Reiniciar sessão de banca? Os dados serão apagados.', ()=>{
+    if(bancaState.jogadas && bancaState.jogadas.length){
+      const ganhos = bancaState.jogadas.filter(j=>j.delta>0).length;
+      const perdas = bancaState.jogadas.filter(j=>j.delta<0).length;
+      const lucro = bancaState.atual - bancaState.inicial;
+      bancaSessoesHist.unshift({
+        ts: Date.now(),
+        inicial: bancaState.inicial,
+        final: bancaState.atual,
+        lucro,
+        pctLucro: bancaState.inicial ? (lucro/bancaState.inicial*100) : 0,
+        totalJogadas: bancaState.jogadas.length,
+        ganhos, perdas,
+        taxaVitoria: (ganhos+perdas) ? Math.round(ganhos/(ganhos+perdas)*100) : 0
+      });
+      if(bancaSessoesHist.length > 30) bancaSessoesHist = bancaSessoesHist.slice(0,30);
+      saveBancaSessoesHist();
+    }
     bancaState.atual = bancaState.inicial;
     bancaState.jogadas = [];
+    bancaState.travaLiberada = false;
     saveBanca();
     renderBanca();
     showToast('🔄 Sessão reiniciada!','green');
   });
+}
+
+function desbloquearBanca(){
+  mostrarConfirmacao('Tens a certeza? O limite que definiste existe para te proteger. Só desbloqueies se sabes o que estás a fazer.', ()=>{
+    bancaState.travaLiberada = true;
+    saveBanca();
+    renderBanca();
+    showToast('🔓 Trava removida — joga com cautela','orange');
+  });
+}
+
+function renderBancaSessoes(){
+  const el = document.getElementById('b-sessoes-list');
+  if(!el) return;
+  if(!bancaSessoesHist.length){ el.innerHTML = '<div class="empty">Sem sessões encerradas ainda.</div>'; return; }
+  el.innerHTML = bancaSessoesHist.slice(0,15).map(s=>{
+    const pos = s.lucro>=0;
+    const data = new Date(s.ts);
+    const dataStr = pad(data.getDate())+'/'+pad(data.getMonth()+1)+' '+pad(data.getHours())+':'+pad(data.getMinutes());
+    return `<div class="hrow" style="${pos?'background:#050e08;':'background:#0e0505;'}">
+      <span class="htime">${dataStr}</span>
+      <span style="flex:1;font-size:0.56rem;color:var(--text);">${s.totalJogadas} jogadas · ${s.taxaVitoria}% vitória</span>
+      <span style="font-family:var(--font-mono);font-size:0.6rem;font-weight:700;color:${pos?'var(--green)':'var(--red)'};">${pos?'+':''}${fmtKz(s.lucro)}</span>
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════════
@@ -8117,6 +7994,100 @@ function renderDepoisQuadra(){
 
   el.innerHTML = html;
 }
+
+function renderDepoisTriplo(){
+  const el = document.getElementById('depois-triplo');
+  if(!el) return;
+
+  const combinado = [];
+  S.triplos.forEach(function(t){ if(t.ts&&t.hora) combinado.push({ts:t.ts,hora:t.hora,tipo:'T'}); });
+  S.quadras.forEach(function(q){ if(q.ts&&q.hora) combinado.push({ts:q.ts,hora:q.hora,tipo:'Q'}); });
+  combinado.sort(function(a,b){ return a.ts-b.ts; }); // ascendente: mais antigo primeiro
+
+  const triplosIdx = [];
+  combinado.forEach(function(e,i){ if(e.tipo==='T') triplosIdx.push(i); });
+
+  if(triplosIdx.length<5){
+    el.innerHTML = '<div class="empty">Precisas de pelo menos 5 triplos registados (com hora) para esta análise.</div>';
+    return;
+  }
+
+  const MAXOFFSET = 4;
+
+  // Frequência de quadras por hora, para classificar quente/seca
+  const freqHoraQuadra = {};
+  S.quadras.forEach(function(q){ if(q.hora){ const h=parseInt(q.hora.split(':')[0]); freqHoraQuadra[h]=(freqHoraQuadra[h]||0)+1; } });
+  const valoresFreq = Object.values(freqHoraQuadra);
+  const mediaFreq = valoresFreq.length ? valoresFreq.reduce(function(a,b){return a+b;},0)/valoresFreq.length : 0;
+
+  function classificarHora(hora){
+    if(!hora) return 'seca';
+    const h = parseInt(hora.split(':')[0]);
+    const f = freqHoraQuadra[h]||0;
+    return f>=mediaFreq ? 'quente' : 'seca';
+  }
+
+  const cont = { todas:Array(MAXOFFSET+1).fill(0), quente:Array(MAXOFFSET+1).fill(0), seca:Array(MAXOFFSET+1).fill(0) };
+  const totalGrupo = { todas:0, quente:0, seca:0 };
+
+  triplosIdx.forEach(function(ti){
+    const grupo = classificarHora(combinado[ti].hora);
+    totalGrupo.todas++;
+    totalGrupo[grupo]++;
+    for(let offset=1; offset<=MAXOFFSET; offset++){
+      const alvo = combinado[ti+offset];
+      if(!alvo) break;
+      if(alvo.tipo==='Q'){
+        cont.todas[offset]++;
+        cont[grupo][offset]++;
+      }
+    }
+  });
+
+  function pct(grupo, offset){
+    return totalGrupo[grupo] ? Math.round((cont[grupo][offset]/totalGrupo[grupo])*100) : 0;
+  }
+
+  let melhorOffset=1, melhorPct=-1;
+  for(let o=1;o<=MAXOFFSET;o++){
+    const p = pct('todas', o);
+    if(p>melhorPct){ melhorPct=p; melhorOffset=o; }
+  }
+
+  function barraOffset(offset){
+    const pTodas = pct('todas',offset);
+    const pQuente = pct('quente',offset);
+    const pSeca = pct('seca',offset);
+    const destaque = offset===melhorOffset;
+    return '<div style="margin-bottom:8px;'+(destaque?'background:#4ade8011;border:1px solid #4ade8044;border-radius:8px;padding:6px 8px;':'')+'">'
+      +'<div style="display:flex;justify-content:space-between;font-size:0.46rem;color:var(--dim2);margin-bottom:3px;">'
+        +'<span>'+(destaque?'⭐ ':'')+'Casa '+offset+' depois do Triplo</span>'
+        +'<span style="color:var(--text);font-weight:700;">'+pTodas+'%</span>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;align-items:center;">'
+        +'<div style="flex:1;">'
+        +'<div style="font-size:0.38rem;color:#ef4444;margin-bottom:1px;">🔥 Quente: '+pQuente+'%</div>'
+        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pQuente+'%;height:100%;background:#ef4444;"></div></div>'
+        +'</div>'
+        +'<div style="flex:1;">'
+        +'<div style="font-size:0.38rem;color:#38bdf8;margin-bottom:1px;">❄️ Seca: '+pSeca+'%</div>'
+        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pSeca+'%;height:100%;background:#38bdf8;"></div></div>'
+        +'</div>'
+      +'</div>'
+      +'</div>';
+  }
+
+  let html = '<div style="font-size:0.46rem;color:var(--dim2);margin-bottom:10px;">Baseado em <b style="color:var(--text);">'+totalGrupo.todas+' triplos</b> ('+totalGrupo.quente+' em horas quentes de Quadra, '+totalGrupo.seca+' em horas secas)</div>';
+  for(let o=1;o<=MAXOFFSET;o++){ html += barraOffset(o); }
+
+  html += '<div style="background:var(--card2);border-radius:8px;padding:8px 10px;font-size:0.48rem;color:var(--text);line-height:1.6;margin-top:6px;">'
+    + '💡 No teu histórico, a Casa '+melhorOffset+' é onde mais aparece uma Quadra depois de um Triplo ('+melhorPct+'%). '
+    + 'Em horas secas de Quadra, essa taxa cai para <b style="color:#38bdf8;">'+pct('seca',melhorOffset)+'%</b> (vs <b style="color:#ef4444;">'+pct('quente',melhorOffset)+'%</b> em horas quentes).'
+    + '</div>'
+    +'<div class="disclaimer" style="margin-top:8px;">⚠ Estatística sobre o teu histórico — cada rodada continua independente e aleatória, não é garantia do próximo resultado.</div>';
+
+  el.innerHTML = html;
+}
 let _mascoteUltimaInteracao = Date.now();
 let _mascoteCelebrando = false;
 let _mascoteEstadoAnterior = null;
@@ -8235,6 +8206,7 @@ renderQuadras = function(){
   safeRun(function(){ renderConfiancaPadrao(S.quadras,'q-confianca','#fbbf24','quadras'); },'renderConfiancaPadrao-q');
   safeRun(function(){ renderSituacaoMomento(S.quadras,'q-situacao','#fbbf24','Quadra','quadras'); },'renderSituacaoMomento-q');
   safeRun(renderDepoisQuadra,'renderDepoisQuadra');
+  safeRun(renderDepoisTriplo,'renderDepoisTriplo');
 };
 
 
@@ -10608,31 +10580,6 @@ function turnoEntriesOrdenadas(){
   return [['madrugada',b.madrugada],['manha',b.manha],['tarde',b.tarde],['noite',b.noite]].sort(function(a,b){return a[1]-b[1];});
 }
 
-function classificarTurno(hora){
-  const entries = turnoEntriesOrdenadas();
-  let turno = entries[entries.length-1][0];
-  for(let i=0;i<entries.length;i++){
-    if(hora>=entries[i][1]) turno = entries[i][0];
-  }
-  return turno;
-}
-
-
-function toggleTurnoConfig(){
-  const el = document.getElementById('turno-config');
-  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
-}
-
-function salvarTurnoConfig(){
-  const b = {};
-  ['madrugada','manha','tarde','noite'].forEach(function(k){
-    const inp = document.getElementById('turno-inp-'+k);
-    b[k] = inp ? Math.max(0, Math.min(23, parseInt(inp.value)||0)) : 0;
-  });
-  setTurnoBoundaries(b);
-  showToast('⏰ Horários dos turnos atualizados!','green');
-}
-
 // ══════════════════════════════════════════════
 //  RADAR DE CONVERGÊNCIA DOS NÚMEROS
 // ══════════════════════════════════════════════
@@ -10913,72 +10860,6 @@ function renderVisaoProfunda(){
     if(typeof renderAntiStreaks==='function') renderAntiStreaks();
 }
 
-function vpMatriz(){
-  const el = document.getElementById('vp-matriz');
-  if(!el) return;
-  const events = buildTimeline();
-  if(events.length<6){ el.innerHTML='<div class="empty">Precisa de mais eventos para calcular a matriz.</div>'; return; }
-
-  const tipos = ['T','Q','D'];
-  const tipoNome = {T:'Triplo',Q:'Quadra',D:'Duplo'};
-  const tipoCor = {T:'#4ade80',Q:'#fbbf24',D:'#c084fc'};
-
-  // Contar transicoes
-  const mat = {T:{T:0,Q:0,D:0},Q:{T:0,Q:0,D:0},D:{T:0,Q:0,D:0}};
-  const totRow = {T:0,Q:0,D:0};
-  for(let i=0;i<events.length-1;i++){
-    const from = events[i+1].tipo;
-    const to = events[i].tipo;
-    mat[from][to]++;
-    totRow[from]++;
-  }
-
-  // Cor semaforo por percentagem
-  function heatColor(pct){
-    if(pct>=50) return '#ef4444';
-    if(pct>=30) return '#f97316';
-    if(pct>=15) return '#fbbf24';
-    if(pct>0)   return '#1a6a1a';
-    return 'var(--border)';
-  }
-
-  // Header
-  let html = '<div style="overflow-x:auto;">'
-    +'<table style="width:100%;border-collapse:separate;border-spacing:3px;font-size:0.52rem;">'
-    +'<thead><tr>'
-    +'<td style="padding:4px;font-size:0.44rem;color:var(--dim2);text-align:center;">DE \ PARA</td>';
-  tipos.forEach(t=>{
-    html += '<td style="padding:4px;text-align:center;font-weight:700;color:'+tipoCor[t]+';">'+tipoNome[t]+'</td>';
-  });
-  html += '</tr></thead><tbody>';
-
-  tipos.forEach(from=>{
-    const tot = totRow[from];
-    html += '<tr><td style="padding:4px;font-weight:700;color:'+tipoCor[from]+';white-space:nowrap;">'+tipoNome[from]+'</td>';
-    tipos.forEach(to=>{
-      const cnt = mat[from][to]||0;
-      const pct = tot ? Math.round((cnt/tot)*100) : 0;
-      const bg = heatColor(pct);
-      const textColor = pct>=15?'white':'var(--dim2)';
-      html += '<td style="padding:4px;text-align:center;background:'+bg+'22;border:1px solid '+bg+'55;border-radius:6px;">'
-        +'<div style="font-family:var(--font-mono);font-weight:700;color:'+bg+';font-size:0.6rem;">'+pct+'%</div>'
-        +'<div style="font-size:0.4rem;color:var(--dim2);">'+cnt+'x</div>'
-        +'</td>';
-    });
-    html += '</tr>';
-  });
-
-  html += '</tbody></table></div>';
-  html += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;padding:0 2px;">'
-    +'<span style="font-size:0.44rem;color:#ef4444;">&#9632; &gt;50%</span>'
-    +'<span style="font-size:0.44rem;color:#f97316;">&#9632; 30-50%</span>'
-    +'<span style="font-size:0.44rem;color:#fbbf24;">&#9632; 15-30%</span>'
-    +'<span style="font-size:0.44rem;color:#1a6a1a;">&#9632; &lt;15%</span>'
-    +'</div>';
-
-  el.innerHTML = html;
-}
-
 function vpDensidade(){
   const el = document.getElementById('vp-densidade');
   if(!el) return;
@@ -11081,120 +10962,6 @@ function buildTimeline(){
   S.quadras.forEach(e=>events.push(Object.assign({},e,{tipo:'Q',corOriginal:e.cor||null,cor:'#fbbf24'})));
   S.duplos.forEach(e=>events.push(Object.assign({},e,{tipo:'D',corOriginal:e.cor||null,cor:'#c084fc',num:(e.pairs&&e.pairs[0])||null,dados:e.dice||e.dados||[]})));
   return events.filter(e=>e.hora).sort((a,b)=>toMin(b.hora)-toMin(a.hora));
-}
-
-function vpTimeline(){
-  const el = document.getElementById('vp-timeline');
-  if(!el) return;
-  const events = buildTimeline();
-  if(events.length<2){ el.innerHTML='<div class="empty">Regista eventos dos 3 tipos para ver a linha do tempo.</div>'; return; }
-  const last30 = events.slice(0,30);
-  el.innerHTML = last30.map(function(e,i){
-    const prev = last30[i+1];
-    const gap = prev ? toMin(last30[i].hora)-toMin(prev.hora) : null;
-    const gapStr = (gap!==null&&gap>0) ? '<span style="font-size:0.44rem;color:var(--dim2);margin-left:6px;">+'+gap+'m</span>' : '';
-    const numStr = e.num ? '<span style="font-family:var(--font-mono);font-weight:700;color:'+e.cor+';margin-left:5px;">Nº'+e.num+'</span>' : '';
-    const pairsStr = (e.pairs&&e.pairs.length) ? '<span style="font-size:0.44rem;color:#e879f9;margin-left:5px;">['+e.pairs.join('+')+']</span>' : '';
-    const isQuente = gap!==null&&gap<=3;
-    const tipoNome = e.tipo==='T'?'TRIPLO':e.tipo==='Q'?'QUADRA':'DUPLO';
-    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:7px;margin-bottom:3px;background:'+(isQuente?e.cor+'11':'transparent')+';border:1px solid '+(isQuente?e.cor+'33':'transparent')+';">'
-      +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);min-width:36px;">'+e.hora+'</span>'
-      +'<span style="background:'+e.cor+'22;border:1px solid '+e.cor+'55;border-radius:5px;padding:1px 6px;font-size:0.5rem;font-weight:700;color:'+e.cor+';">'+tipoNome+'</span>'
-      +numStr+pairsStr+gapStr+'</div>';
-  }).join('');
-}
-
-function vpRelacoes(){
-  const el = document.getElementById('vp-relacoes');
-  if(!el) return;
-  const events = buildTimeline();
-  if(events.length<5){ el.innerHTML='<div class="empty">Precisa de mais eventos para calcular relacoes.</div>'; return; }
-  const subs = {T:{T:0,Q:0,D:0}, Q:{T:0,Q:0,D:0}, D:{T:0,Q:0,D:0}};
-  const totals = {T:0,Q:0,D:0};
-  for(let i=0;i<events.length-1;i++){
-    const current = events[i+1].tipo;
-    const next = events[i].tipo;
-    subs[current][next]++;
-    totals[current]++;
-  }
-  const tipoCor = {T:'var(--green)',Q:'var(--gold)',D:'var(--purple)'};
-  const tipoNome = {T:'Triplo',Q:'Quadra',D:'Duplo'};
-  el.innerHTML = ['T','Q','D'].map(function(tipo){
-    const tot = totals[tipo];
-    if(!tot) return '';
-    const rows = ['T','Q','D'].map(function(next){
-      const cnt = subs[tipo][next]||0;
-      const pct = tot ? Math.round((cnt/tot)*100) : 0;
-      if(!cnt) return '';
-      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-        +'<span style="font-size:0.5rem;color:'+tipoCor[next]+';min-width:56px;font-weight:700;">'+tipoNome[next]+'</span>'
-        +'<div style="flex:1;background:var(--border);border-radius:3px;height:12px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+tipoCor[next]+';border-radius:3px;"></div></div>'
-        +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);min-width:44px;">'+cnt+'x ('+pct+'%)</span></div>';
-    }).join('');
-    if(!rows) return '';
-    return '<div style="background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;margin-bottom:8px;">'
-      +'<div style="font-size:0.48rem;color:'+tipoCor[tipo]+';font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:7px;">Apos '+tipoNome[tipo]+' ('+tot+'x) aparece:</div>'
-      +rows+'</div>';
-  }).join('');
-}
-
-
-function vpGaps(){
-  const el = document.getElementById('vp-gaps');
-  if(!el) return;
-  const events = buildTimeline();
-  if(events.length<5){ el.innerHTML='<div class="empty">Precisa de mais eventos.</div>'; return; }
-  const afterGap = {T:0,Q:0,D:0};
-  let gapCount = 0;
-  for(let i=0;i<events.length-1;i++){
-    const gap = toMin(events[i].hora)-toMin(events[i+1].hora);
-    if(gap>=10){ afterGap[events[i].tipo]++; gapCount++; }
-  }
-  if(!gapCount){ el.innerHTML='<div style="font-size:0.55rem;color:var(--dim2);padding:4px;">Nenhum gap longo (>=10 min) detetado ainda.</div>'; return; }
-  const tipoCor = {T:'var(--green)',Q:'var(--gold)',D:'var(--purple)'};
-  const tipoNome = {T:'Triplo',Q:'Quadra',D:'Duplo'};
-  const sorted = Object.entries(afterGap).sort(function(a,b){return b[1]-a[1];});
-  const top = sorted[0];
-  el.innerHTML = '<div style="background:#0a1a0a;border:1px solid var(--border);border-radius:9px;padding:10px;">'
-    +'<div style="font-size:0.52rem;color:var(--dim2);margin-bottom:6px;">Apos silencio &gt;=10 min, o primeiro evento foi:</div>'
-    +sorted.map(function(pair){
-      const tipo=pair[0], cnt=pair[1];
-      const pct = Math.round((cnt/gapCount)*100);
-      return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">'
-        +'<span style="font-size:0.52rem;color:'+tipoCor[tipo]+';font-weight:700;min-width:52px;">'+tipoNome[tipo]+'</span>'
-        +'<div style="flex:1;background:var(--border);border-radius:3px;height:13px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+tipoCor[tipo]+';border-radius:3px;"></div></div>'
-        +'<span style="font-family:var(--font-mono);font-size:0.5rem;color:var(--dim2);">'+cnt+'x / '+pct+'%</span></div>';
-    }).join('')
-    +'<div style="margin-top:8px;font-size:0.52rem;color:var(--cyan);">Apos silencio, o mais comum e um <b style="color:'+tipoCor[top[0]]+';">'+tipoNome[top[0]]+'</b> ('+Math.round((top[1]/gapCount)*100)+'% das vezes)</div>'
-    +'</div>';
-}
-
-function vpNumerosCruzados(){
-  const el = document.getElementById('vp-numeros');
-  if(!el) return;
-  if(!S.triplos.length&&!S.quadras.length&&!S.duplos.length){ el.innerHTML='<div class="empty">Sem dados ainda.</div>'; return; }
-  const freq = {};
-  for(let n=1;n<=6;n++) freq[n]={T:0,Q:0,D:0};
-  S.triplos.forEach(function(e){ if(e.num>=1&&e.num<=6) freq[e.num].T++; });
-  S.quadras.forEach(function(e){ if(e.num>=1&&e.num<=6) freq[e.num].Q++; });
-  S.duplos.forEach(function(e){ (e.pairs||[]).forEach(function(p){ if(p>=1&&p<=6) freq[p].D++; }); });
-  const maxT = Math.max.apply(null,Object.values(freq).map(function(f){return f.T;}).concat([1]));
-  const maxQ = Math.max.apply(null,Object.values(freq).map(function(f){return f.Q;}).concat([1]));
-  const maxD = Math.max.apply(null,Object.values(freq).map(function(f){return f.D;}).concat([1]));
-  const numColors = ['','#ef4444','#f97316','#fbbf24','#4ade80','#38bdf8','#c084fc'];
-  el.innerHTML = [1,2,3,4,5,6].map(function(n){
-    const c = numColors[n];
-    const tP = Math.round((freq[n].T/maxT)*100);
-    const qP = Math.round((freq[n].Q/maxQ)*100);
-    const dP = Math.round((freq[n].D/maxD)*100);
-    return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">'
-      +'<span style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;color:'+c+';min-width:16px;text-align:center;">'+n+'</span>'
-      +'<div style="flex:1;display:flex;flex-direction:column;gap:2px;">'
-      +'<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:0.4rem;color:#4ade80;min-width:10px;">T</span><div style="flex:1;height:8px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+tP+'%;height:100%;background:#4ade80;border-radius:3px;"></div></div><span style="font-family:var(--font-mono);font-size:0.42rem;color:var(--dim2);min-width:20px;">'+freq[n].T+'</span></div>'
-      +'<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:0.4rem;color:#fbbf24;min-width:10px;">Q</span><div style="flex:1;height:8px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+qP+'%;height:100%;background:#fbbf24;border-radius:3px;"></div></div><span style="font-family:var(--font-mono);font-size:0.42rem;color:var(--dim2);min-width:20px;">'+freq[n].Q+'</span></div>'
-      +'<div style="display:flex;align-items:center;gap:4px;"><span style="font-size:0.4rem;color:#c084fc;min-width:10px;">D</span><div style="flex:1;height:8px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+dP+'%;height:100%;background:#c084fc;border-radius:3px;"></div></div><span style="font-family:var(--font-mono);font-size:0.42rem;color:var(--dim2);min-width:20px;">'+freq[n].D+'</span></div>'
-      +'</div></div>';
-  }).join('');
 }
 
 function vpRitmo(){
@@ -11854,14 +11621,6 @@ function showPatternAlert(msg, type='streak'){
   patternAlertTimer = setTimeout(()=>dismissAlert(), 8000);
 }
 
-function vibrateApp(pattern){
-  try{
-    if(navigator.vibrate){
-      navigator.vibrate(0);
-      navigator.vibrate(pattern);
-    }
-  }catch(e){}
-}
 function stopVibrate(){
   try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){}
 }
@@ -13436,370 +13195,12 @@ function chiQuadrado(observados, esperados){
   return chi2;
 }
 
-function renderChiQuadrado(){
-  const arr = S.triplos;
-  const res = document.getElementById('chi-resultado-principal');
-  const testes = document.getElementById('chi-testes');
-  if(!res||!testes) return;
-
-  if(arr.length<20){
-    res.innerHTML=`<div style="padding:8px;text-align:center;color:var(--dim2);font-size:0.58rem;">Precisa de pelo menos <b style="color:var(--text);">20 triplos</b> para o teste ser válido.<br>Tens ${arr.length} registados.</div>`;
-    testes.innerHTML='';
-    return;
-  }
-
-  const resultados=[];
-
-  // ── TESTE 1: Uniformidade dos números (1-6) ──
-  const freqNum={1:0,2:0,3:0,4:0,5:0,6:0};
-  arr.forEach(t=>freqNum[t.num]=(freqNum[t.num]||0)+1);
-  const n=arr.length;
-  const esperadoNum=n/6;
-  const obsNum=Object.values(freqNum);
-  const chi2Num=chiQuadrado(obsNum, Array(6).fill(esperadoNum));
-  const dfNum=5; // 6-1
-  const pNum=chi2pValue(chi2Num, dfNum);
-  resultados.push({
-    nome:'Uniformidade dos Números (1-6)',
-    desc:'Os números saem com igual probabilidade?',
-    chi2:chi2Num, df:dfNum, p:pNum,
-    obs:obsNum, esp:esperadoNum,
-    interpretacao: pNum<0.05
-      ? `✅ Significativo (p=${pNum.toFixed(3)}) — os números NÃO saem com igual frequência. O teu histórico mostra viés real!`
-      : `⚪ Não significativo (p=${pNum.toFixed(3)}) — os números saem de forma aproximadamente uniforme (sem viés detetável).`
-  });
-
-  // ── TESTE 2: Distribuição por hora do dia ──
-  const horasAtivas={};
-  arr.forEach(t=>{
-    if(!t.hora) return;
-    const h=parseInt(t.hora.split(':')[0]);
-    horasAtivas[h]=(horasAtivas[h]||0)+1;
-  });
-  const horasKeys=Object.keys(horasAtivas).map(Number).sort((a,b)=>a-b);
-  if(horasKeys.length>=3){
-    const obsHora=horasKeys.map(h=>horasAtivas[h]);
-    const totalHora=obsHora.reduce((a,b)=>a+b,0);
-    const espHora=obsHora.map(()=>totalHora/horasKeys.length);
-    const chi2Hora=chiQuadrado(obsHora, espHora);
-    const dfHora=horasKeys.length-1;
-    const pHora=chi2pValue(chi2Hora, dfHora);
-    resultados.push({
-      nome:'Distribuição por Hora do Dia',
-      desc:'Os triplos distribuem-se igualmente ao longo do dia?',
-      chi2:chi2Hora, df:dfHora, p:pHora,
-      interpretacao: pHora<0.05
-        ? `✅ Significativo (p=${pHora.toFixed(3)}) — há horas claramente mais quentes que outras! Os padrões horários são REAIS.`
-        : `⚪ Não significativo (p=${pHora.toFixed(3)}) — a distribuição horária não difere significativamente do aleatório.`
-    });
-  }
-
-  // ── TESTE 3: Independência de sequências (pares consecutivos) ──
-  if(arr.length>=30){
-    const trans={};
-    for(let i=0;i<arr.length-1;i++){
-      const from=arr[i+1].num, to=arr[i].num;
-      if(!trans[from]) trans[from]={1:0,2:0,3:0,4:0,5:0,6:0};
-      trans[from][to]=(trans[from][to]||0)+1;
-    }
-    let chi2Trans=0;
-    let totalPares=arr.length-1;
-    [1,2,3,4,5,6].forEach(from=>{
-      if(!trans[from]) return;
-      const totalRow=Object.values(trans[from]).reduce((a,b)=>a+b,0);
-      if(totalRow<5) return;
-      [1,2,3,4,5,6].forEach(to=>{
-        const obs=trans[from][to]||0;
-        const esp=(totalRow/totalPares)*(totalPares/6);
-        if(esp>0) chi2Trans+=Math.pow(obs-esp,2)/esp;
-      });
-    });
-    const dfTrans=25; // (6-1)*(6-1)
-    const pTrans=chi2pValue(chi2Trans, dfTrans);
-    resultados.push({
-      nome:'Independência das Sequências',
-      desc:'O número anterior influencia o seguinte?',
-      chi2:chi2Trans, df:dfTrans, p:pTrans,
-      interpretacao: pTrans<0.05
-        ? `✅ Significativo (p=${pTrans.toFixed(3)}) — há dependência entre números consecutivos! O Mapa de Sequências mostra padrões REAIS.`
-        : `⚪ Não significativo (p=${pTrans.toFixed(3)}) — os números consecutivos parecem independentes entre si.`
-    });
-  }
-
-  // ── RESULTADO GLOBAL ──
-  const sigCount=resultados.filter(r=>r.p<0.05).length;
-  const totalTestes=resultados.length;
-  const icon = sigCount===totalTestes?'🔥':sigCount>0?'⚡':'❄️';
-  const cor = sigCount===totalTestes?'var(--green)':sigCount>0?'var(--orange)':'var(--blue)';
-  const msg = sigCount===totalTestes
-    ? 'TODOS os padrões são estatisticamente significativos! Os teus dados mostram estrutura real.'
-    : sigCount>0
-    ? `${sigCount} de ${totalTestes} testes são significativos. Há padrões reais misturados com ruído.`
-    : 'Nenhum padrão é estatisticamente significativo com os dados atuais. Precisa de mais dados ou os padrões são aleatórios.';
-
-  res.innerHTML=`
-    <div style="background:#080d12;border:1px solid ${cor}44;border-radius:10px;padding:12px;margin-bottom:8px;text-align:center;">
-      <div style="font-size:2rem;margin-bottom:5px;">${icon}</div>
-      <div style="font-family:var(--font-display);font-size:1rem;color:${cor};letter-spacing:0.06em;margin-bottom:5px;">${sigCount}/${totalTestes} TESTES SIGNIFICATIVOS</div>
-      <div style="font-size:0.55rem;color:var(--text);line-height:1.6;">${msg}</div>
-      <div style="font-size:0.48rem;color:var(--dim2);margin-top:5px;">Baseado em <b style="color:var(--text);">${n} triplos</b> registados</div>
-    </div>`;
-
-  // Testes individuais
-  testes.innerHTML=resultados.map(r=>{
-    const sig=r.p<0.05;
-    const cor2=sig?'var(--green)':'var(--blue)';
-    const nivel=r.p<0.001?'***':r.p<0.01?'**':r.p<0.05?'*':'ns';
-    return `<div style="background:var(--card2);border:1px solid ${cor2}33;border-radius:9px;padding:10px 12px;margin-bottom:6px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">
-        <div>
-          <div style="font-size:0.6rem;font-weight:700;color:var(--text);">${r.nome}</div>
-          <div style="font-size:0.5rem;color:var(--dim2);margin-top:1px;">${r.desc}</div>
-        </div>
-        <span style="background:${cor2}22;color:${cor2};border:1px solid ${cor2}44;border-radius:4px;padding:2px 7px;font-size:0.5rem;font-weight:700;flex-shrink:0;margin-left:8px;">${sig?'✅ SIG':'⚪ N.S.'} ${nivel}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;">
-        <div style="text-align:center;background:#0a0d10;border-radius:6px;padding:5px;"><div style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:${cor2};">${r.chi2.toFixed(2)}</div><div style="font-size:0.44rem;color:var(--dim2);">χ²</div></div>
-        <div style="text-align:center;background:#0a0d10;border-radius:6px;padding:5px;"><div style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:var(--text);">${r.df}</div><div style="font-size:0.44rem;color:var(--dim2);">df</div></div>
-        <div style="text-align:center;background:#0a0d10;border-radius:6px;padding:5px;"><div style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:${sig?'var(--green)':'var(--dim2)'};">${r.p<0.001?'<0.001':r.p.toFixed(3)}</div><div style="font-size:0.44rem;color:var(--dim2);">p-value</div></div>
-      </div>
-      <div style="font-size:0.52rem;color:var(--text);line-height:1.6;background:#070a08;border-radius:6px;padding:7px 9px;">${r.interpretacao}</div>
-    </div>`;
-  }).join('');
-}
-
 // ══════════════════════════════════════════════
 //  ANÁLISE DE CORES
 // ══════════════════════════════════════════════
 let coresState = JSON.parse(localStorage.getItem('pro_cores')||'[]');
 const saveCores = () => localStorage.setItem('pro_cores', JSON.stringify(coresState));
 
-const COR_INFO = {
-  'B': {emoji:'🔴', label:'Banca',   cor:'#ef4444'},
-  'J': {emoji:'🔵', label:'Jogador', cor:'#38bdf8'},
-  'E': {emoji:'🟢', label:'Empate',  cor:'#00e676'},
-};
-
-function switchImportTab(tab, btn){
-  ['ocr','cores','csv'].forEach(t=>{
-    const el=document.getElementById('import-tab-'+t);
-    if(el) el.style.display=t===tab?'block':'none';
-  });
-  if(btn){
-    btn.closest('.mini-tabs').querySelectorAll('.mini-tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-}
-
-function registarCor(cor){
-  const n = new Date();
-  const hora = `${pad(n.getHours())}:${pad(n.getMinutes())}`;
-  coresState.unshift({cor, hora, ts: Date.now()});
-  if(coresState.length > 500) coresState = coresState.slice(0,500);
-  saveCores();
-  playBeep(cor==='E'?660:cor==='B'?330:440, 0.06);
-  renderCoresSeq();
-  renderCoresAnalise();
-}
-
-function desfazerCor(){
-  if(!coresState.length) return;
-  coresState.shift();
-  saveCores();
-  renderCoresSeq();
-  renderCoresAnalise();
-}
-
-function limparCores(){
-  mostrarConfirmacao('Limpar toda a sequência de cores?', ()=>{
-    coresState = [];
-    saveCores();
-    renderCoresSeq();
-    renderCoresAnalise();
-  });
-}
-
-function renderCoresSeq(){
-  const el = document.getElementById('cores-seq');
-  if(!el) return;
-  const last30 = coresState.slice(0,30);
-  if(!last30.length){
-    el.innerHTML='<span style="font-size:0.5rem;color:var(--dim2);">Toca nos botões acima para registar</span>';
-    return;
-  }
-  el.innerHTML = last30.map((c,i)=>{
-    const info = COR_INFO[c.cor];
-    return `<div style="
-      width:24px;height:24px;border-radius:5px;
-      background:${info.cor}22;border:1.5px solid ${info.cor}${i===0?'':'88'};
-      display:flex;align-items:center;justify-content:center;
-      font-size:0.65rem;cursor:pointer;
-      ${i===0?`box-shadow:0 0 8px ${info.cor}66;animation:urgpulse 1.5s infinite;`:''}
-      transition:all 0.15s;
-    " title="${info.label} às ${c.hora}">${info.emoji}</div>`;
-  }).join('');
-}
-
-function renderCoresAnalise(){
-  const arr = coresState;
-  const totalEl = document.getElementById('cores-total-label');
-  if(totalEl) totalEl.textContent = `${arr.length} resultados registados`;
-
-  if(!arr.length){
-    ['cores-stats','cores-padroes','cores-previsao','cores-streaks'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.innerHTML='<div class="empty">Regista resultados para ver análise.</div>';
-    });
-    return;
-  }
-
-  // ── DISTRIBUIÇÃO ──────────────────────────
-  const freq = {B:0,J:0,E:0};
-  arr.forEach(c=>freq[c.cor]=(freq[c.cor]||0)+1);
-  const total = arr.length;
-  const statsEl = document.getElementById('cores-stats');
-  if(statsEl) statsEl.innerHTML = ['B','J','E'].map(c=>{
-    const info=COR_INFO[c];
-    const pct=Math.round((freq[c]/total)*100);
-    return `<div style="margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-        <span style="font-size:0.6rem;font-weight:700;color:${info.cor};">${info.emoji} ${info.label}</span>
-        <span style="font-family:var(--font-mono);font-size:0.65rem;color:${info.cor};">${freq[c]}x · ${pct}%</span>
-      </div>
-      <div style="height:8px;background:var(--border);border-radius:5px;overflow:hidden;">
-        <div style="width:${pct}%;height:100%;background:${info.cor};border-radius:5px;transition:width 0.5s;position:relative;overflow:hidden;">
-          <div style="position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,#ffffff44,transparent);animation:shimmer 2s infinite;"></div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  // ── PADRÕES DE TRANSIÇÃO ──────────────────
-  const trans = {B:{B:0,J:0,E:0}, J:{B:0,J:0,E:0}, E:{B:0,J:0,E:0}};
-  for(let i=0;i<arr.length-1;i++){
-    const from=arr[i+1].cor, to=arr[i].cor;
-    if(trans[from]) trans[from][to]=(trans[from][to]||0)+1;
-  }
-  const padroesEl = document.getElementById('cores-padroes');
-  if(padroesEl) padroesEl.innerHTML = ['B','J','E'].map(from=>{
-    const info=COR_INFO[from];
-    const totFrom=Object.values(trans[from]).reduce((a,b)=>a+b,0);
-    if(!totFrom) return '';
-    const sorted=Object.entries(trans[from]).sort((a,b)=>b[1]-a[1]);
-    return `<div style="margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-        <div style="width:28px;height:28px;border-radius:7px;background:${info.cor}22;border:1.5px solid ${info.cor};display:flex;align-items:center;justify-content:center;font-size:1rem;">${info.emoji}</div>
-        <span style="font-size:0.52rem;color:var(--dim2);">Depois de ${info.label} (${totFrom}x):</span>
-      </div>
-      <div style="display:flex;gap:6px;">
-        ${sorted.map(([to,v])=>{
-          const ti=COR_INFO[to];
-          const pct=Math.round((v/totFrom)*100);
-          return `<div style="flex:1;background:${ti.cor}11;border:1px solid ${ti.cor}44;border-radius:8px;padding:7px 4px;text-align:center;">
-            <div style="font-size:0.9rem;margin-bottom:2px;">${ti.emoji}</div>
-            <div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;color:${ti.cor};">${pct}%</div>
-            <div style="font-size:0.44rem;color:var(--dim2);">${v}x</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }).join('');
-
-  // ── PREVISÃO JANELA VERDE ─────────────────
-  const prevEl = document.getElementById('cores-previsao');
-  if(prevEl){
-    // Distância desde o último empate
-    let distUltimoEmpate = 0;
-    for(let i=0;i<arr.length;i++){
-      if(arr[i].cor==='E') break;
-      distUltimoEmpate++;
-    }
-
-    // Intervalo médio entre empates
-    const posEmpates = arr.reduce((a,c,i)=>c.cor==='E'?[...a,i]:a,[]);
-    let avgIntEmpate = null;
-    if(posEmpates.length>=2){
-      const diffs=[];
-      for(let i=0;i<posEmpates.length-1;i++) diffs.push(posEmpates[i+1]-posEmpates[i]);
-      avgIntEmpate = Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length);
-    }
-
-    // Probabilidade após N vermelhos/azuis
-    const probAposStreak = {};
-    let curStreak=0, curTipo='';
-    for(let i=arr.length-1;i>=1;i--){
-      if(arr[i].cor!=='E'){
-        curStreak++; curTipo=arr[i].cor;
-      } else {
-        const key=curStreak;
-        if(!probAposStreak[key]) probAposStreak[key]={total:0,empate:0};
-        probAposStreak[key].total++;
-        if(arr[i-1]?.cor==='E') probAposStreak[key].empate++;
-        curStreak=0;
-      }
-    }
-
-    const streakAtual = distUltimoEmpate;
-    const prob = avgIntEmpate ? Math.min(95, Math.round((streakAtual/avgIntEmpate)*100)) : null;
-    const cor = prob>=80?'var(--red)':prob>=50?'var(--orange)':'var(--green)';
-
-    prevEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-        <div style="background:#080d08;border:1px solid #00e67633;border-radius:9px;padding:10px;text-align:center;">
-          <div style="font-size:0.44rem;color:var(--dim2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Desde último 🟢</div>
-          <div style="font-family:var(--font-display);font-size:1.8rem;color:var(--green);">${distUltimoEmpate}</div>
-          <div style="font-size:0.44rem;color:var(--dim2);">resultados atrás</div>
-        </div>
-        <div style="background:#080d08;border:1px solid #00e67633;border-radius:9px;padding:10px;text-align:center;">
-          <div style="font-size:0.44rem;color:var(--dim2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Intervalo médio</div>
-          <div style="font-family:var(--font-display);font-size:1.8rem;color:var(--cyan);">${avgIntEmpate||'—'}</div>
-          <div style="font-size:0.44rem;color:var(--dim2);">resultados</div>
-        </div>
-      </div>
-      ${prob!==null?`
-      <div style="background:#0a1a0a;border:1px solid ${cor}44;border-radius:9px;padding:10px 12px;">
-        <div style="display:flex;justify-content:space-between;font-size:0.5rem;color:var(--dim2);margin-bottom:5px;">
-          <span>🔮 PROBABILIDADE DE EMPATE AGORA</span>
-          <span style="color:${cor};font-weight:700;">${prob}%</span>
-        </div>
-        <div style="height:8px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:6px;">
-          <div style="width:${prob}%;height:100%;background:${cor};border-radius:5px;transition:width 0.6s;"></div>
-        </div>
-        <div style="font-size:0.52rem;color:${cor};font-weight:700;">
-          ${prob>=80?'🔥 Janela quente! Empate muito provável agora!':prob>=50?'♨️ Acima da média — boa janela para entrar':prob>=30?'🌡 Moderado — continua a observar':'❄️ Cedo ainda — aguarda mais alguns resultados'}
-        </div>
-      </div>`:'<div class="empty">Regista mais resultados para ver previsão.</div>'}
-    `;
-  }
-
-  // ── STREAKS ───────────────────────────────
-  const streaksEl = document.getElementById('cores-streaks');
-  if(streaksEl){
-    const streaks=[];
-    let sc=1;
-    for(let i=1;i<arr.length;i++){
-      if(arr[i].cor===arr[i-1].cor) sc++;
-      else{
-        if(sc>=2) streaks.push({cor:arr[i-1].cor, count:sc});
-        sc=1;
-      }
-    }
-    if(sc>=2) streaks.push({cor:arr[arr.length-1]?.cor, count:sc});
-    const top=streaks.sort((a,b)=>b.count-a.count).slice(0,6);
-    streaksEl.innerHTML = top.length ? top.map((s,i)=>{
-      const info=COR_INFO[s.cor];
-      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border)11;">
-        <span style="font-size:0.55rem;color:var(--dim2);min-width:16px;">${i+1}.</span>
-        <span style="font-size:1rem;">${info.emoji}</span>
-        <span style="font-size:0.6rem;color:${info.cor};font-weight:700;">${info.label}</span>
-        <div style="flex:1;height:4px;background:var(--border);border-radius:3px;overflow:hidden;">
-          <div style="width:${Math.round((s.count/top[0].count)*100)}%;height:100%;background:${info.cor};border-radius:3px;"></div>
-        </div>
-        <span style="font-family:var(--font-mono);font-size:0.65rem;font-weight:700;color:${info.cor};">${s.count}x</span>
-      </div>`;
-    }).join('') : '<div class="empty">Sem streaks de 2+ ainda.</div>';
-  }
-}
 
 // ══════════════════════════════════════════════
 //  RENDER ALL
@@ -19655,10 +19056,7 @@ function renderAll(){
   safeRun(renderPrevisao,'renderPrevisao');
   safeRun(renderTurboHist,'renderTurboHist');
   safeRun(renderMapaSequencias,'renderMapaSequencias');
-  safeRun(renderObjetivos,'renderObjetivos');
-  safeRun(renderCoresSeq,'renderCoresSeq');
-  safeRun(renderCoresAnalise,'renderCoresAnalise');
-  safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca');
+  safeRun(renderObjetivos,'renderObjetivos');  safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
 function verificacoesLeves(){
