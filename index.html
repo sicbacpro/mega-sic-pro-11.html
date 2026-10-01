@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-145</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-146</div>
   </div>
 
   <!-- Display PIN -->
@@ -3627,6 +3627,7 @@ function pinConfirmar(){
     }
     sessionStorage.setItem('pin_ok','1');
     pinTentativas=0;
+    safeRun(renderAll,'renderAll-pos-pin');
   } else {
     // PIN errado
     pinTentativas++;
@@ -18943,22 +18944,37 @@ setInterval(function(){
 
 
 function renderAll(){
+  // ── Essencial: o que aparece logo no ecrã (Dashboard/Triplos/Quadras/Banca) ──
   safeRun(renderDashboard,'renderDashboard');
   safeRun(renderTriplos,'renderTriplos');
   safeRun(renderQuadras,'renderQuadras');
   safeRun(renderDuplos,'renderDuplos');
   safeRun(renderFin,'renderFin');
   safeRun(renderSessoes,'renderSessoes');
-  safeRun(renderPadroes,'renderPadroes');
-  safeRun(renderIAHistorico,'renderIAHistorico');
-  safeRun(renderConquistas,'renderConquistas');
   safeRun(renderMeta,'renderMeta');
-  safeRun(renderPlaneador,'renderPlaneador');
-  safeRun(renderCicloDetector,'renderCicloDetector');
-  safeRun(renderPrevisao,'renderPrevisao');
-  safeRun(renderTurboHist,'renderTurboHist');
-  safeRun(renderMapaSequencias,'renderMapaSequencias');
   safeRun(renderObjetivos,'renderObjetivos');  safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca'); safeRun(renderBancaMeta,'renderBancaMeta');
+  safeRun(checkPatternAlerts,'checkPatternAlerts');
+
+  // ── Pesado: adiado para depois do ecrã estar visível, em lotes, para o telemóvel não travar/matar a página ──
+  setTimeout(()=>{
+    safeRun(renderPadroes,'renderPadroes');
+    safeRun(renderIAHistorico,'renderIAHistorico');
+  }, 60);
+  setTimeout(()=>{
+    safeRun(renderConquistas,'renderConquistas');
+    safeRun(renderPlaneador,'renderPlaneador');
+    safeRun(renderCicloDetector,'renderCicloDetector');
+  }, 140);
+  setTimeout(()=>{
+    safeRun(renderPrevisao,'renderPrevisao');
+    safeRun(renderTurboHist,'renderTurboHist');
+    safeRun(renderMapaSequencias,'renderMapaSequencias');
+  }, 220);
+}
+// Versão só do essencial — usada antes do PIN estar confirmado, para o ecrã de bloqueio
+// nunca ficar a competir por memória com os cálculos pesados da Análise/IA.
+function renderEssencialPreBoot(){
+  safeRun(renderDashboard,'renderDashboard');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
 function verificacoesLeves(){
@@ -19012,7 +19028,12 @@ safeRun(initNotasObs,'initNotasObs');
 safeRun(initFavButtons,'initFavButtons');
 safeRun(renderFavoritosCard,'renderFavoritosCard');
 safeRun(checkModoRecordar,'checkModoRecordar');
-safeRun(renderAll,'renderAll-initial');
+if(sessionStorage.getItem('pin_ok')==='1'){
+  safeRun(renderAll,'renderAll-initial');
+} else {
+  // Ainda não entraste o PIN — não gastamos memória a calcular tudo atrás do ecrã de bloqueio.
+  safeRun(renderEssencialPreBoot,'renderEssencialPreBoot');
+}
 safeRun(renderMascote,'renderMascote-initial');
 </script>
 
