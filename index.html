@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-146</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-147</div>
   </div>
 
   <!-- Display PIN -->
@@ -18945,6 +18945,7 @@ setInterval(function(){
 
 function renderAll(){
   // ── Essencial: o que aparece logo no ecrã (Dashboard/Triplos/Quadras/Banca) ──
+  safeRun(fecharEditModalSeAberto,'fecharEditModal-boot');
   safeRun(renderDashboard,'renderDashboard');
   safeRun(renderTriplos,'renderTriplos');
   safeRun(renderQuadras,'renderQuadras');
@@ -18974,6 +18975,7 @@ function renderAll(){
 // Versão só do essencial — usada antes do PIN estar confirmado, para o ecrã de bloqueio
 // nunca ficar a competir por memória com os cálculos pesados da Análise/IA.
 function renderEssencialPreBoot(){
+  safeRun(fecharEditModalSeAberto,'fecharEditModal-boot');
   safeRun(renderDashboard,'renderDashboard');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
@@ -19042,7 +19044,7 @@ safeRun(renderMascote,'renderMascote-initial');
 <div id="mascote-balao" style="position:fixed;bottom:62px;right:14px;z-index:500;background:#0a0a14;border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:0.44rem;color:var(--text);max-width:150px;opacity:0;transform:translateY(6px);transition:all 0.3s ease;pointer-events:none;"></div>
 
 <!-- MODAL DE EDICAO -->
-<div id="edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:#000000cc;display:flex;align-items:center;justify-content:center;padding:16px;" onclick="fecharEditModal()">
+<div id="edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:#000000cc;align-items:center;justify-content:center;padding:16px;" onclick="fecharEditModal()">
   <div style="background:#0a0d0a;border:1px solid var(--green)55;border-radius:14px;padding:16px;width:100%;max-width:340px;" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div style="font-family:var(--font-display);font-size:1rem;color:var(--green);" id="edit-modal-titulo">Editar Registo</div>
