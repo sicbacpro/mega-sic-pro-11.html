@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-147</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-150</div>
   </div>
 
   <!-- Display PIN -->
@@ -614,15 +614,6 @@ textarea:focus{border-color:var(--green)!important;}
 
   <!-- BOTAO DE EMERGENCIA - SILENCIO TOTAL -->
   <button data-essencial="1" onclick="silencioTotal()" style="width:100%;padding:11px;margin-bottom:10px;border-radius:12px;background:#2a0a0a;border:2px solid #ef4444;color:#ef4444;font-size:0.6rem;font-weight:700;cursor:pointer;">🔇 SILÊNCIO TOTAL (corta tudo agora)</button>
-
-  <!-- RITMO DO JOGO -->
-  <div class="card" id="sec-ritmo-jogo" data-essencial="1" style="margin-bottom:10px;border-color:#3a2a0a;">
-    <div class="ch">
-      <div class="ci" style="background:#1a1005;">⚡</div>
-      <div><div class="ct" style="color:var(--orange);">Ritmo do Jogo</div><div class="cs">Rápido ou lento agora — ligado ao tráfego da plataforma</div></div>
-    </div>
-    <div id="dash-ritmo-conteudo" style="padding:10px;font-size:0.46rem;color:var(--dim2);">A carregar...</div>
-  </div>
 
   <!-- BOLETIM DE AMANHÃ -->
   <div class="card" id="sec-boletim-amanha" data-essencial="1" style="margin-bottom:10px;border-color:#0a3a2a;">
@@ -1884,27 +1875,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="padding:8px;" id="prev-top3"></div>
   </div>
 
-  <!-- CALENDÁRIO 24H -->
-  <div class="card" style="border-color:#2a1a5a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#2a1a5a;">
-      <div class="ci" style="background:#100820;">🗓</div>
-      <div><div class="ct" style="color:#a78bfa;">Previsão Hora a Hora</div><div class="cs">Próximas 24 horas completas</div></div>
-    </div>
-
-    <!-- Tabs amanhã/hoje -->
-    <div class="mini-tabs" style="border-color:#2a1a5a;">
-      <button class="mini-tab active" onclick="switchPrevTab('hoje',this)" style="color:var(--dim2);">Hoje</button>
-      <button class="mini-tab" onclick="switchPrevTab('amanha',this)">Amanhã</button>
-    </div>
-
-    <div id="prev-tab-hoje">
-      <div style="padding:8px;" id="prev-hoje-grid"></div>
-    </div>
-    <div id="prev-tab-amanha" style="display:none;">
-      <div style="padding:8px;" id="prev-amanha-grid"></div>
-    </div>
-  </div>
-
   <!-- PADRÃO SEMANAL -->
   <div class="card" style="border-color:#2a1a5a;margin-bottom:10px;">
     <div class="ch" style="border-color:#2a1a5a;">
@@ -1943,15 +1913,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:1.8rem;margin-bottom:5px;">🗺</div>
     <div style="font-family:var(--font-display);font-size:1.3rem;color:var(--white);letter-spacing:0.08em;">MAPA DE SEQUÊNCIAS</div>
     <div style="font-size:0.55rem;color:var(--dim2);margin-top:3px;">O que costuma aparecer depois de cada número</div>
-  </div>
-
-  <!-- MAPA PRINCIPAL -->
-  <div class="card" style="border-color:#1a2a5a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#1a2a5a;">
-      <div class="ci" style="background:#080a20;">🔗</div>
-      <div><div class="ct" style="color:#a78bfa;">Matriz de Transições</div><div class="cs">De → Para · Espessura = frequência</div></div>
-    </div>
-    <div style="padding:10px;" id="mapa-matriz"></div>
   </div>
 
   <!-- TOP SEQUÊNCIAS -->
@@ -2371,15 +2332,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div class="meta-label"><span>🟡 QUADRAS HOJE</span><span id="meta-q-nums">0 / 0</span></div>
       <div class="meta-bar"><div class="meta-bar-fill" id="meta-q-bar" style="background:linear-gradient(90deg,var(--gold),var(--orange));width:0%;"></div></div>
     </div>
-  </div>
-
-  <!-- PROGRESSO TEMPO REAL -->
-  <div class="card" style="border-color:#1a3000;margin-bottom:10px;">
-    <div class="ch" style="border-color:#1a3000;">
-      <div class="ci" style="background:#081400;">📊</div>
-      <div><div class="ct">Progresso em Tempo Real</div><div class="cs" id="obj-prog-sub">Hoje</div></div>
-    </div>
-    <div id="obj-progresso" style="padding:8px;"></div>
   </div>
 
   <!-- OBJETIVOS ATIVOS -->
@@ -3848,6 +3800,7 @@ function goPage(id, btn){
   safeRun(closeQuickModal,'closeQuickModal-goPage');
   safeRun(fecharEditModalSeAberto,'fecharEditModal-goPage');
   if(id==='sniper' && typeof renderSniper==='function') renderSniper();
+  safeRun(()=>_renderAbaPesadaSeNecessario(id),'renderAbaPesada-'+id);
 }
 // Fecha o modal de edicao se estiver aberto, sem lancar erro se a funcao/elemento nao existir
 function fecharEditModalSeAberto(){
@@ -4193,10 +4146,7 @@ function renderModoRecordar(){
 //  FAVORITAR CARTÕES
 // ══════════════════════════════════════════════
 const FAV_CARDS = [
-  {key:'onde-estou', label:'🧭 Onde Estou?', page:'padroes'},
-  {key:'comparador-cc', label:'⚔️ Comparador', page:'padroes'},
   {key:'numeros-frios', label:'🧊 Números a Evitar', page:'padroes', miniTab:'profunda'},
-  {key:'heatmap-mes', label:'🗓️ Heatmap do Mês', page:'padroes', miniTab:'profunda'},
   {key:'hora-extrato-lista', label:'🕐 Extrato por Hora', page:'padroes', miniTab:'hora'},
   {key:'t-situacao', label:'🎲 Situação (Triplo)', page:'triplos'},
   {key:'q-situacao', label:'🎲 Situação (Quadra)', page:'quadras'},
@@ -8611,32 +8561,6 @@ function calcRitmoAtual(){
     ultimoTs:ultimoTs, ultimoHora:arr[arr.length-1].hora, nArr:arr.length, nTotal:S.triplos.length,
     normalNestaHora:normalNestaHora, horaEhForte:horaEhForte, sinalDuplo:sinalDuplo};
 }
-function renderRitmoAtual(){
-  const el = document.getElementById('dash-ritmo-conteudo');
-  if(!el) return;
-  const r = calcRitmoAtual();
-  if(!r || r.debug){
-    const dataUltimo = r && r.ultimoTs ? new Date(r.ultimoTs).toLocaleString('pt-BR') : '—';
-    el.innerHTML = '<div class="empty" style="font-size:0.46rem;color:var(--dim2);">Dados insuficientes ainda para calcular o ritmo.'
-      +'<br><span style="font-size:0.4rem;">[debug] registos fiáveis: '+(r?r.nArr:0)+'/'+(r?r.nTotal:S.triplos.length)+' · último: '+dataUltimo+'</span></div>';
-    return;
-  }
-  const cor = r.rapido ? 'var(--green)' : '#fbbf24';
-  const label = r.rapido ? '⚡ RÁPIDO' : '🐢 LENTO';
-  const sinalHtml = r.sinalDuplo
-    ? '<div style="background:linear-gradient(135deg,var(--green)22,var(--green)08);border:1px solid var(--green);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:0.46rem;color:var(--green);font-weight:700;">🔥 SINAL DUPLO — ritmo rápido + hora forte e estável</div>'
-    : '';
-  const contextoHtml = r.normalNestaHora!==null
-    ? '<div style="font-size:0.4rem;color:var(--dim2);margin-top:3px;">Normal para esta hora: '+r.normalNestaHora+'% rápido</div>'
-    : '';
-  el.innerHTML = sinalHtml + '<div style="text-align:center;padding:4px 0;">'
-    +'<div style="font-size:1.15rem;font-weight:700;color:'+cor+';font-family:var(--font-mono);letter-spacing:0.08em;">'+label+'</div>'
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin-top:5px;">Último intervalo: '+r.ultimoGap.toFixed(1)+'min (mediana: '+r.mediana.toFixed(1)+'min)</div>'
-    +'<div style="font-size:0.48rem;color:var(--text);margin-top:4px;"><b style="color:'+cor+';">'+Math.round(r.pContinua*100)+'%</b> de chance de continuar assim</div>'
-    +contextoHtml
-    +'</div>';
-}
-
 function renderProximaHoraForteTriplo(){
   const el = document.getElementById('proxima-hora-forte-triplo');
   if(!el) return;
@@ -8740,7 +8664,6 @@ function renderDashboard(){
   safeRun(renderBoletimMes,'renderBoletimMes');
   safeRun(renderScanSemanal,'renderScanSemanal');
   safeRun(renderBoletimAmanha,'renderBoletimAmanha');
-  safeRun(renderRitmoAtual,'renderRitmoAtual');
   safeRun(applyModoEssencial,'applyModoEssencial');
   safeRun(syncTurnoPills,'syncTurnoPills');
 
@@ -9109,7 +9032,6 @@ function renderPadroes(){
   renderHeatmap();
   renderStreaks();
   renderVisaoProfunda();
-  safeRun(renderOndeEstou,'renderOndeEstou');
   safeRun(renderRelatorioSemanal,'renderRelatorioSemanal');
   safeRun(renderHorasSemanaAtual,'renderHorasSemanaAtual');
   safeRun(renderMudancaPadrao,'renderMudancaPadrao');
@@ -9123,10 +9045,6 @@ function renderPadroes(){
   safeRun(renderVelocidadeRecuperacao,'renderVelocidadeRecuperacao');
   safeRun(renderCruzamentoSinais,'renderCruzamentoSinais');
   safeRun(renderSessaoGemea,'renderSessaoGemea');
-  safeRun(renderExplosaoNoturna,'renderExplosaoNoturna');
-  safeRun(renderComparadorCabecaCabeca,'renderComparadorCabecaCabeca');
-  safeRun(renderHeatmapMes,'renderHeatmapMes');
-  safeRun(renderRadarConvergencia,'renderRadarConvergencia');
   safeRun(function(){ if(typeof window.cpSugerirPadroes==='function') window.cpSugerirPadroes(); },'cpSugerirPadroes-auto');
 }
 
@@ -10292,111 +10210,9 @@ function renderSessaoGemea(){
 // ══════════════════════════════════════════════
 //  EXPLOSAO NOTURNA (manha seca -> noite mais ativa?)
 // ══════════════════════════════════════════════
-function renderExplosaoNoturna(){
-  const el = document.getElementById('explosao-noturna');
-  if(!el) return;
-
-  const dupIdx = new Set(_encontrarDuplicados(S.quadras));
-  const unicos = S.quadras.filter(function(_,i){ return !dupIdx.has(i); });
-
-  const porDia = {};
-  unicos.forEach(function(e){
-    if(!e.ts || !e.hora) return;
-    const dk = _diaKey(e.ts);
-    const h = parseInt(e.hora.split(':')[0]);
-    if(!porDia[dk]) porDia[dk] = {manha:0, noite:0};
-    if(h>=4 && h<=11) porDia[dk].manha++;
-    if(h>=18 && h<=23) porDia[dk].noite++;
-  });
-  const dias = Object.values(porDia);
-  if(dias.length<10){
-    el.innerHTML = '<div class="empty">Ainda com poucos dias de histórico para testar esta ideia (mínimo 10 dias).</div>';
-    return;
-  }
-  const baixa = dias.filter(function(d){ return d.manha<=1; });
-  const alta = dias.filter(function(d){ return d.manha>=3; });
-  const media = function(arr, campo){ return arr.length ? arr.reduce(function(a,d){return a+d[campo];},0)/arr.length : 0; };
-  const mediaNoiteBaixa = media(baixa,'noite');
-  const mediaNoiteAlta = media(alta,'noite');
-  const mediaNoiteGeral = media(dias,'noite');
-
-  // Hoje
-  const hojeKey = _diaKey(Date.now());
-  const hojeD = new Date();
-  const hojeH = hojeD.getHours();
-  const manhaHoje = (porDia[hojeKey]||{manha:0}).manha;
-
-  let html = '<div style="background:#0a0a14;border-radius:9px;padding:10px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
-  html += '📊 Histórico ('+dias.length+' dias): manhã fraca (0-1 quadra) → média de <b style="color:#818cf8;">'+mediaNoiteBaixa.toFixed(2)+'</b> à noite. Manhã forte (3+) → <b>'+mediaNoiteAlta.toFixed(2)+'</b>. Média geral: '+mediaNoiteGeral.toFixed(2)+'.<br>';
-
-  if(hojeH<11){
-    html += '⏳ Ainda é de manhã (só '+manhaHoje+' quadra'+(manhaHoje===1?'':'s')+' até agora) — cedo para saber como vai a noite hoje.';
-  } else if(manhaHoje<=1){
-    html += '🌙 Hoje a manhã foi seca ('+manhaHoje+' quadra'+(manhaHoje===1?'':'s')+') — historicamente, nesses dias a noite tende a ser um pouco mais ativa. Vale ficar atenta a partir das 18h.';
-  } else {
-    html += '☀️ Hoje a manhã já teve '+manhaHoje+' quadras — dentro do normal ou forte, sem sinal de "compensação" à noite esperado.';
-  }
-  html += '</div>';
-  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ '+(baixa.length<10?'Amostra de dias com manhã fraca ainda pequena ('+baixa.length+' dias) — sinal fraco, a confirmar com mais dados.':'')+'</div>';
-
-  el.innerHTML = html;
-}
-
 // ══════════════════════════════════════════════
 //  ASSISTENTE "ONDE ESTOU?"
 // ══════════════════════════════════════════════
-function renderOndeEstou(){
-  const el = document.getElementById('onde-estou');
-  if(!el) return;
-  const horaAtual = new Date().getHours();
-
-  const stT = calcPadraoStats(S.triplos);
-  const stQ = calcPadraoStats(S.quadras);
-
-  function freqHora(arr){
-    const f={};
-    arr.forEach(function(t){ if(t.hora){ const h=parseInt(t.hora.split(':')[0]); f[h]=(f[h]||0)+1; } });
-    return f;
-  }
-  function top5Horas(arr){
-    const f=freqHora(arr);
-    return Object.entries(f).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(p){return parseInt(p[0]);});
-  }
-  const top5T = top5Horas(S.triplos);
-  const top5Q = top5Horas(S.quadras);
-
-  let sinais = 0;
-  const listaSinais = [];
-  if(top5T.includes(horaAtual)){ sinais++; listaSinais.push('🟢 Hora quente para Triplos'); }
-  if(top5Q.includes(horaAtual)){ sinais++; listaSinais.push('🟡 Hora quente para Quadras'); }
-  if(stT.temDistancia && stT.estado==='atraso'){ sinais++; listaSinais.push('🟢 Triplo em atraso (acima da média)'); }
-  if(stQ.temDistancia && stQ.estado==='atraso'){ sinais++; listaSinais.push('🟡 Quadra em atraso (acima da média)'); }
-
-  const elapsedT = stT.temDistancia ? stT.elapsed : null;
-  const elapsedQ = stQ.temDistancia ? stQ.elapsed : null;
-  const corSinal = sinais>=3?'#ef4444':sinais>=1?'#fbbf24':'var(--dim2)';
-
-  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">'
-    +'<div style="background:#08121a;border:1px solid var(--cyan)33;border-radius:9px;padding:8px;text-align:center;">'
-      +'<div style="font-size:0.4rem;color:var(--dim2);margin-bottom:3px;">AGORA</div>'
-      +'<div style="font-family:var(--font-mono);font-size:0.95rem;font-weight:700;color:var(--cyan);">'+pad(horaAtual)+'h</div>'
-    +'</div>'
-    +'<div style="background:#08121a;border:1px solid #4ade8033;border-radius:9px;padding:8px;text-align:center;">'
-      +'<div style="font-size:0.4rem;color:var(--dim2);margin-bottom:3px;">DESDE TRIPLO</div>'
-      +'<div style="font-family:var(--font-mono);font-size:0.95rem;font-weight:700;color:#4ade80;">'+(elapsedT!==null?elapsedT+'min':'—')+'</div>'
-    +'</div>'
-    +'<div style="background:#08121a;border:1px solid #fbbf2433;border-radius:9px;padding:8px;text-align:center;">'
-      +'<div style="font-size:0.4rem;color:var(--dim2);margin-bottom:3px;">DESDE QUADRA</div>'
-      +'<div style="font-family:var(--font-mono);font-size:0.95rem;font-weight:700;color:#fbbf24;">'+(elapsedQ!==null?elapsedQ+'min':'—')+'</div>'
-    +'</div>'
-    +'</div>'
-    +'<div style="background:'+corSinal+'14;border:1px solid '+corSinal+'44;border-radius:9px;padding:9px 10px;">'
-      +'<div style="font-size:0.48rem;font-weight:700;color:'+corSinal+';margin-bottom:4px;">🔥 '+sinais+' padrão(ões) ativo(s) agora</div>'
-      + (listaSinais.length ? listaSinais.map(function(s){ return '<div style="font-size:0.46rem;color:var(--text);margin-top:2px;">• '+s+'</div>'; }).join('') : '<div style="font-size:0.46rem;color:var(--dim2);">Nada de especial detetado nesta hora.</div>')
-    +'</div>'
-    +'<div class="disclaimer" style="margin-top:8px;">⚠ Apenas um resumo do teu histórico — não é uma previsão do próximo resultado.</div>';
-}
-
 // ══════════════════════════════════════════════
 //  NÚMEROS A EVITAR HOJE (inverso dos números quentes)
 // ══════════════════════════════════════════════
@@ -10404,61 +10220,6 @@ function renderOndeEstou(){
 // ══════════════════════════════════════════════
 //  HEATMAP DO MÊS (estilo "contribuições" GitHub)
 // ══════════════════════════════════════════════
-function renderHeatmapMes(){
-  const el = document.getElementById('heatmap-mes');
-  if(!el) return;
-  const agora = new Date();
-  const ano = agora.getFullYear(), mes = agora.getMonth();
-  const diasNoMes = new Date(ano, mes+1, 0).getDate();
-  const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
-
-  const contagem = {};
-  for(let d=1; d<=diasNoMes; d++) contagem[d]=0;
-  function contar(arr){
-    arr.forEach(function(t){
-      if(!t.ts) return;
-      const dt = new Date(t.ts);
-      if(dt.getFullYear()===ano && dt.getMonth()===mes){
-        contagem[dt.getDate()] = (contagem[dt.getDate()]||0)+1;
-      }
-    });
-  }
-  contar(S.triplos); contar(S.quadras);
-
-  const max = Math.max.apply(null, Object.values(contagem).concat([1]));
-  const nomesMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const diasSemanaLbl = ['D','S','T','Q','Q','S','S'];
-
-  function corCel(v){
-    if(v===0) return '#0a0a0a';
-    const pct=v/max;
-    return pct>=0.75?'#22c55e':pct>=0.5?'#16a34a':pct>=0.25?'#16a34a99':'#16a34a44';
-  }
-
-  let html = '<div style="font-size:0.5rem;color:var(--text);font-weight:700;margin-bottom:8px;text-align:center;">'+nomesMes[mes]+' '+ano+'</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">'
-    + diasSemanaLbl.map(function(d){ return '<div style="font-size:0.36rem;color:var(--dim2);text-align:center;">'+d+'</div>'; }).join('')
-    +'</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
-  for(let i=0;i<primeiroDiaSemana;i++){ html += '<div></div>'; }
-  const hojeD = agora.getDate();
-  for(let d=1; d<=diasNoMes; d++){
-    const v = contagem[d];
-    const isHoje = d===hojeD;
-    html += '<div title="'+d+'/'+(mes+1)+' — '+v+'x" style="aspect-ratio:1;border-radius:4px;background:'+corCel(v)+';border:'+(isHoje?'2px solid var(--cyan)':'1px solid transparent')+';display:flex;align-items:center;justify-content:center;font-size:0.36rem;color:'+(v>0?'white':'#3a3a3a')+';">'+d+'</div>';
-  }
-  html += '</div>';
-
-  const totalMes = Object.values(contagem).reduce(function(a,b){return a+b;},0);
-  const melhorDiaEntry = Object.entries(contagem).sort(function(a,b){return b[1]-a[1];})[0];
-  html += '<div style="margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:0.44rem;color:var(--dim2);">'
-    +'<span>Total do mês: <b style="color:var(--green);">'+totalMes+'</b></span>'
-    + (melhorDiaEntry && melhorDiaEntry[1]>0 ? '<span>Melhor dia: <b style="color:var(--green);">'+melhorDiaEntry[0]+'/'+(mes+1)+'</b> ('+melhorDiaEntry[1]+'x)</span>' : '')
-    +'</div>';
-
-  el.innerHTML = html;
-}
-
 // ══════════════════════════════════════════════
 //  RESUMO POR TURNO (Madrugada/Manhã/Tarde/Noite)
 // ══════════════════════════════════════════════
@@ -10499,11 +10260,6 @@ function radarConvergenciaDados(periodo){
   arrT.forEach(function(t){ if(t.num>=1&&t.num<=6) freqT[t.num]++; });
   arrQ.forEach(function(q){ if(q.num>=1&&q.num<=6) freqQ[q.num]++; });
   return {freqT:freqT, freqQ:freqQ, nT:arrT.length, nQ:arrQ.length};
-}
-
-function setRadarPeriodo(p){
-  _radarPeriodo = p;
-  renderRadarConvergencia();
 }
 
 // ══════════════════════════════════════════════
@@ -10588,172 +10344,9 @@ function testarHipotese(){
     +'</div></div>';
 }
 
-function renderRadarConvergencia(){
-  const el = document.getElementById('radar-convergencia');
-  if(!el) return;
-  const periodo = _radarPeriodo;
-  const d = radarConvergenciaDados(periodo);
-
-  let html = '<div style="display:flex;gap:6px;margin-bottom:10px;">'
-    +'<button onclick="setRadarPeriodo(\'tudo\')" style="flex:1;padding:7px;border-radius:8px;border:1px solid '+(periodo==='tudo'?'var(--cyan)':'var(--border)')+';background:'+(periodo==='tudo'?'var(--cyan)22':'transparent')+';color:'+(periodo==='tudo'?'var(--cyan)':'var(--dim2)')+';font-size:0.48rem;font-weight:700;cursor:pointer;">Todo o histórico</button>'
-    +'<button onclick="setRadarPeriodo(\'24h\')" style="flex:1;padding:7px;border-radius:8px;border:1px solid '+(periodo==='24h'?'var(--cyan)':'var(--border)')+';background:'+(periodo==='24h'?'var(--cyan)22':'transparent')+';color:'+(periodo==='24h'?'var(--cyan)':'var(--dim2)')+';font-size:0.48rem;font-weight:700;cursor:pointer;">Últimas 24h</button>'
-    +'</div>';
-
-  if(d.nT<3 && d.nQ<3){
-    html += '<div class="empty">Regista mais Triplos/Quadras'+(periodo==='24h'?' nas últimas 24h':'')+' para veres o radar de convergência.</div>';
-    el.innerHTML = html;
-    return;
-  }
-
-  const maxT = Math.max.apply(null, d.freqT.slice(1).concat([1]));
-  const maxQ = Math.max.apply(null, d.freqQ.slice(1).concat([1]));
-  const cx=100, cy=100, maxR=75;
-
-  function ponto(i, valor, maxVal){
-    const frac = maxVal>0 ? valor/maxVal : 0;
-    const r = frac*maxR;
-    const ang = (Math.PI*2*i/6) - Math.PI/2;
-    return (cx+r*Math.cos(ang))+','+(cy+r*Math.sin(ang));
-  }
-  function poligono(freq, maxVal){
-    const pts=[];
-    for(let i=0;i<6;i++) pts.push(ponto(i, freq[i+1], maxVal));
-    return pts.join(' ');
-  }
-
-  let grid='';
-  [0.33,0.66,1].forEach(function(f){
-    const pts=[];
-    for(let i=0;i<6;i++){
-      const ang=(Math.PI*2*i/6)-Math.PI/2;
-      pts.push((cx+maxR*f*Math.cos(ang))+','+(cy+maxR*f*Math.sin(ang)));
-    }
-    grid += '<polygon points="'+pts.join(' ')+'" fill="none" stroke="#333" stroke-width="1"/>';
-  });
-  let eixos='', labels='';
-  for(let i=0;i<6;i++){
-    const ang=(Math.PI*2*i/6)-Math.PI/2;
-    const x2=cx+maxR*Math.cos(ang), y2=cy+maxR*Math.sin(ang);
-    eixos += '<line x1="'+cx+'" y1="'+cy+'" x2="'+x2+'" y2="'+y2+'" stroke="#333" stroke-width="1"/>';
-    const lx=cx+(maxR+14)*Math.cos(ang), ly=cy+(maxR+14)*Math.sin(ang);
-    labels += '<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#888" font-family="monospace">'+(i+1)+'</text>';
-  }
-
-  const polyT = poligono(d.freqT, maxT);
-  const polyQ = poligono(d.freqQ, maxQ);
-
-  const svg = '<svg viewBox="0 0 200 200" style="width:100%;max-width:280px;display:block;margin:0 auto;">'
-    + grid + eixos
-    + '<polygon points="'+polyT+'" fill="#4ade8033" stroke="#4ade80" stroke-width="2"/>'
-    + '<polygon points="'+polyQ+'" fill="#fbbf2433" stroke="#fbbf24" stroke-width="2"/>'
-    + labels
-    + '</svg>';
-
-  function top3(freq){
-    const arr=[];
-    for(let n=1;n<=6;n++) if(freq[n]>0) arr.push({num:n,cnt:freq[n]});
-    return arr.sort(function(a,b){return b.cnt-a.cnt;}).slice(0,3).map(function(x){return x.num;});
-  }
-  const t3T = top3(d.freqT), t3Q = top3(d.freqQ);
-  const convergentes = t3T.filter(function(n){ return t3Q.indexOf(n)>=0; });
-
-  html += svg
-    +'<div style="display:flex;justify-content:center;gap:14px;margin-top:6px;margin-bottom:8px;">'
-    +'<div style="display:flex;align-items:center;gap:4px;font-size:0.42rem;color:#4ade80;"><span style="width:8px;height:8px;border-radius:2px;background:#4ade80;"></span>Triplos ('+d.nT+')</div>'
-    +'<div style="display:flex;align-items:center;gap:4px;font-size:0.42rem;color:#fbbf24;"><span style="width:8px;height:8px;border-radius:2px;background:#fbbf24;"></span>Quadras ('+d.nQ+')</div>'
-    +'</div>';
-
-  if(convergentes.length){
-    html += '<div style="background:#1a1004;border:1px solid #fbbf2444;border-radius:9px;padding:8px 10px;margin-bottom:6px;">'
-      +'<div style="font-size:0.46rem;color:#fbbf24;font-weight:700;margin-bottom:4px;">✨ NÚMEROS CONVERGENTES</div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-      + convergentes.map(function(n){ return '<div style="background:#fbbf2422;border:1px solid #fbbf2455;border-radius:7px;padding:5px 12px;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:#fbbf24;">'+n+'</div>'; }).join('')
-      +'</div>'
-      +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:5px;">Estão no top 3 tanto em Triplos como em Quadras — atenção redobrada quando saírem.</div>'
-      +'</div>';
-  } else {
-    html += '<div class="empty">Sem números em comum nos top 3 de Triplos e Quadras neste período.</div>';
-  }
-
-  html += '<div class="disclaimer" style="margin-top:8px;">⚠ Padrão do teu histórico — cada rodada continua independente e aleatória.</div>';
-
-  el.innerHTML = html;
-}
-
 // ══════════════════════════════════════════════
 //  COMPARADOR CABEÇA-A-CABEÇA (Triplo vs Quadra)
 // ══════════════════════════════════════════════
-function renderComparadorCabecaCabeca(){
-  const el = document.getElementById('comparador-cc');
-  if(!el) return;
-
-  function metrics(arr){
-    const n = arr.length;
-    const ivs = arr.filter(function(t){return t.interval>0&&t.interval<500;}).map(function(t){return t.interval;});
-    const mediaIv = ivs.length ? Math.round(ivs.reduce(function(a,b){return a+b;},0)/ivs.length) : null;
-    const freqHora = {};
-    arr.forEach(function(t){ if(t.hora){ const h=parseInt(t.hora.split(':')[0]); freqHora[h]=(freqHora[h]||0)+1; } });
-    const horas = Object.entries(freqHora).sort(function(a,b){return b[1]-a[1];});
-    const melhorHora = horas.length ? parseInt(horas[0][0]) : null;
-    const st = calcPadraoStats(arr);
-    return {n:n, mediaIv:mediaIv, melhorHora:melhorHora, st:st};
-  }
-
-  const mT = metrics(S.triplos);
-  const mQ = metrics(S.quadras);
-
-  if(mT.n<5 && mQ.n<5){
-    el.innerHTML = '<div class="empty">Regista mais Triplos e Quadras para veres a comparação.</div>';
-    return;
-  }
-
-  function scoreQuente(m){
-    if(!m.st.temDistancia || !m.st.temConfianca || !m.st.media) return null;
-    const relDist = m.st.elapsed/m.st.media;
-    return relDist * (m.st.final/100);
-  }
-  const scoreT = scoreQuente(mT);
-  const scoreQ = scoreQuente(mQ);
-
-  let vencedorHtml = '';
-  if(scoreT!==null && scoreQ!==null){
-    const dif = Math.abs(scoreT-scoreQ);
-    if(dif<0.15){
-      vencedorHtml = '🤝 Empate — ambos parecidamente "quentes" agora';
-    } else if(scoreT>scoreQ){
-      vencedorHtml = '<span style="color:#4ade80;">🟢 Triplo</span> parece mais "quente" agora';
-    } else {
-      vencedorHtml = '<span style="color:#fbbf24;">🟡 Quadra</span> parece mais "quente" agora';
-    }
-  } else {
-    vencedorHtml = 'Ainda sem dados suficientes de ambos para decidir um "vencedor".';
-  }
-
-  function linha(label, valT, valQ){
-    return '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">'
-      +'<div style="text-align:right;font-family:var(--font-mono);font-size:0.6rem;font-weight:700;color:#4ade80;">'+valT+'</div>'
-      +'<div style="font-size:0.4rem;color:var(--dim2);text-align:center;white-space:nowrap;padding:0 4px;">'+label+'</div>'
-      +'<div style="text-align:left;font-family:var(--font-mono);font-size:0.6rem;font-weight:700;color:#fbbf24;">'+valQ+'</div>'
-      +'</div>';
-  }
-
-  let html = '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">'
-    +'<div style="font-size:0.6rem;font-weight:700;color:#4ade80;">🟢 TRIPLO</div>'
-    +'<div style="font-size:0.6rem;font-weight:700;color:#fbbf24;">QUADRA 🟡</div>'
-    +'</div>';
-
-  html += linha('Registados', mT.n, mQ.n);
-  html += linha('Intervalo médio', mT.mediaIv!==null?mT.mediaIv+'min':'—', mQ.mediaIv!==null?mQ.mediaIv+'min':'—');
-  html += linha('Melhor hora', mT.melhorHora!==null?pad(mT.melhorHora)+'h':'—', mQ.melhorHora!==null?pad(mQ.melhorHora)+'h':'—');
-  html += linha('Distância atual', mT.st.temDistancia?mT.st.elapsed+'min':'—', mQ.st.temDistancia?mQ.st.elapsed+'min':'—');
-  html += linha('Confiança', mT.st.temConfianca?mT.st.final+'/100':'—', mQ.st.temConfianca?mQ.st.final+'/100':'—');
-
-  html += '<div style="margin-top:10px;padding:9px;background:var(--card2);border-radius:8px;text-align:center;font-size:0.54rem;font-weight:700;color:var(--text);">'+vencedorHtml+'</div>';
-  html += '<div class="disclaimer" style="margin-top:8px;">⚠ Comparação estatística do teu histórico — não é garantia de qual vai sair primeiro.</div>';
-
-  el.innerHTML = html;
-}
-
 // =====================================
 //  VISAO PROFUNDA
 // =====================================
@@ -12355,15 +11948,6 @@ function renderCicloDetector(){
 // ══════════════════════════════════════════════
 //  PREVISÃO 24H
 // ══════════════════════════════════════════════
-function switchPrevTab(tab, btn){
-  ['hoje','amanha'].forEach(t=>{
-    const el=document.getElementById('prev-tab-'+t);
-    if(el) el.style.display = t===tab?'block':'none';
-  });
-  btn.closest('.mini-tabs').querySelectorAll('.mini-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
 function calcScoreHora(h, arr){
   // Triplos nesta hora em todo o histórico
   const nesta = arr.filter(t=>t.hora&&parseInt(t.hora.split(':')[0])===h).length;
@@ -12443,36 +12027,6 @@ function renderPrevisao(){
       <div style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:${cor};">${s.score}%</div>
     </div>`;
   }).join('');
-
-  // ── GRID HORA A HORA ─────────────────────────
-  const renderGrid = (startH, containerId) => {
-    const el = document.getElementById(containerId);
-    if(!el) return;
-    el.innerHTML = Array.from({length:24},(_,i)=>{
-      const h=(startH+i)%24;
-      const s=scores[h];
-      const isAtual = h===horaAtual && startH===horaAtual;
-      const cor = s.score>=75?'#a78bfa':s.score>=55?'var(--cyan)':s.score>=35?'var(--green)':'var(--border2)';
-      const icon = s.score>=75?'🔥':s.score>=55?'♨️':s.score>=35?'🌡':'❄️';
-      const numFreq={};
-      arr.filter(t=>t.hora&&parseInt(t.hora.split(':')[0])===h).forEach(t=>numFreq[t.num]=(numFreq[t.num]||0)+1);
-      const topN=Object.entries(numFreq).sort((a,b)=>b[1]-a[1])[0];
-      return `<div class="prev-hora-item ${s.score>=55?'quente':''} ${isAtual?'atual':''}">
-        <div class="prev-hora-icon">${icon}</div>
-        <div class="prev-hora-time" style="color:${cor};">${pad(h)}h</div>
-        <div class="prev-hora-bar-wrap">
-          <div class="prev-hora-bar" style="width:${s.score}%;background:${cor};"></div>
-        </div>
-        <div style="font-size:0.5rem;color:var(--dim2);min-width:50px;text-align:center;">
-          ${s.count}x${topN?` · <span style="color:${colors[parseInt(topN[0])]}">N${topN[0]}</span>`:''}
-        </div>
-        <div class="prev-hora-score" style="color:${cor};">${s.score}%</div>
-      </div>`;
-    }).join('');
-  };
-
-  renderGrid(horaAtual,'prev-hoje-grid');
-  renderGrid(0,'prev-amanha-grid');
 
   // ── PADRÃO SEMANAL ───────────────────────────
   const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -12672,35 +12226,6 @@ function renderMapaSequencias(){
     const from=arr[i+1].num, to=arr[i].num;
     if(!trans[from]) trans[from]={1:0,2:0,3:0,4:0,5:0,6:0};
     trans[from][to]=(trans[from][to]||0)+1;
-  }
-
-  // Renderizar matriz visual
-  if(matriz){
-    let html='';
-    [1,2,3,4,5,6].forEach(from=>{
-      if(!trans[from]) return;
-      const total=Object.values(trans[from]).reduce((a,b)=>a+b,0);
-      if(!total) return;
-      const maxV=Math.max(...Object.values(trans[from]),1);
-      const sorted=Object.entries(trans[from]).sort((a,b)=>b[1]-a[1]).filter(([,v])=>v>0);
-      html+=`<div class="seq-row">
-        <div style="width:28px;height:28px;border-radius:7px;background:${nc[from]}22;border:2px solid ${nc[from]};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:1.1rem;color:${nc[from]};flex-shrink:0;">${from}</div>
-        <div style="color:var(--dim2);font-size:0.8rem;flex-shrink:0;">→</div>
-        <div style="flex:1;display:flex;gap:5px;flex-wrap:wrap;align-items:flex-end;">
-          ${sorted.map(([to,v])=>{
-            const pct=Math.round((v/maxV)*100);
-            const opacity=0.4+(v/maxV)*0.6;
-            return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-              <span style="font-size:0.42rem;color:var(--dim2);">${v}x</span>
-              <div style="width:26px;height:26px;border-radius:6px;background:${nc[parseInt(to)]}${Math.round(opacity*255).toString(16).padStart(2,'0')};border:1.5px solid ${nc[parseInt(to)]};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:0.95rem;color:${nc[parseInt(to)]};">${to}</div>
-              <div style="width:${Math.round(pct*26/100)}px;height:3px;background:${nc[parseInt(to)]};border-radius:2px;"></div>
-            </div>`;
-          }).join('')}
-        </div>
-        <div style="font-size:0.48rem;color:var(--dim2);flex-shrink:0;">${total}x</div>
-      </div>`;
-    });
-    matriz.innerHTML=html||'<div class="empty">Sem dados suficientes.</div>';
   }
 
   // Top sequências
@@ -12909,28 +12434,6 @@ function renderObjetivos(){
       }).join('');
     }
   }
-
-  // ── PROGRESSO GERAL EM TEMPO REAL ──
-  const prog=document.getElementById('obj-progresso');
-  if(prog){
-    const tHoje=S.triplos.filter(t=>t.ts&&new Date(t.ts).toISOString().slice(0,10)===hoje).length;
-    const qHoje=S.quadras.filter(q=>q.ts&&new Date(q.ts).toISOString().slice(0,10)===hoje).length;
-    const metaT=metaState.triplos||20;
-    const metaQ=metaState.quadras||3;
-    const pctT=Math.min(100,Math.round((tHoje/metaT)*100));
-    const pctQ=Math.min(100,Math.round((qHoje/metaQ)*100));
-    prog.innerHTML=`
-      <div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;font-size:0.5rem;color:var(--dim2);margin-bottom:3px;"><span>🟢 Triplos</span><span style="color:var(--green);">${tHoje}/${metaT}</span></div>
-        <div class="obj-progbar"><div class="obj-progbar-fill" style="width:${pctT}%;background:linear-gradient(90deg,var(--green),var(--cyan));"></div></div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;font-size:0.5rem;color:var(--dim2);margin-bottom:3px;"><span>🟡 Quadras</span><span style="color:var(--gold);">${qHoje}/${metaQ}</span></div>
-        <div class="obj-progbar"><div class="obj-progbar-fill" style="width:${pctQ}%;background:linear-gradient(90deg,var(--gold),var(--orange));"></div></div>
-      </div>`;
-  }
-  const progSub=document.getElementById('obj-prog-sub');
-  if(progSub) progSub.textContent=n.toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
 
   // ── OBJETIVOS ATIVOS (definidos pelo utilizador) ──
   renderObjetivosAtivos();
@@ -13804,8 +13307,6 @@ function cpRenderDepth(){
 function renderMinutos(){
   minMapaMinutos();
   safeRun(renderMinutosVizinhos,'renderMinutosVizinhos');
-  minCadencia();
-  minProximoQuente();
   minPorTipo();
 }
 
@@ -15055,108 +14556,6 @@ function exportarMapaMinutos(){
 }
 
 
-function minCadencia(){
-  const el = document.getElementById('min-cadencia');
-  if(!el) return;
-  const ev = minGetTodosEventos();
-  if(ev.length<6){ el.innerHTML='<div class="empty">Sem dados suficientes.</div>'; return; }
-
-  // Calcular gaps em minutos entre eventos consecutivos
-  const sorted = ev.slice().sort(function(a,b){return toMin(a.hora)-toMin(b.hora);});
-  const gaps = [];
-  for(let i=1;i<sorted.length;i++){
-    const g = toMin(sorted[i].hora)-toMin(sorted[i-1].hora);
-    if(g>0&&g<=10) gaps.push(g*60); // converter para segundos
-  }
-
-  if(gaps.length<3){ el.innerHTML='<div class="empty">Dados insuficientes para detetar cadencia.</div>'; return; }
-
-  // Estimar cadencia: moda dos gaps (valor mais frequente)
-  const gapFreq = {};
-  gaps.forEach(function(g){
-    const bucket = Math.round(g/30)*30; // agrupar em buckets de 30s
-    gapFreq[bucket]=(gapFreq[bucket]||0)+1;
-  });
-  const modaGap = Object.entries(gapFreq).sort(function(a,b){return b[1]-a[1];})[0];
-  const cadenciaSeg = parseInt(modaGap[0]);
-  const cadenciaMin = Math.floor(cadenciaSeg/60);
-  const cadenciaSegResto = cadenciaSeg%60;
-
-  // Media e desvio
-  const avgGap = gaps.reduce(function(a,b){return a+b;},0)/gaps.length;
-  const stdGap = Math.sqrt(gaps.map(function(v){return Math.pow(v-avgGap,2);}).reduce(function(a,b){return a+b;},0)/gaps.length);
-
-  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;">'
-    +'<div style="background:#0a1020;border:1px solid var(--blue)33;border-radius:9px;padding:8px;text-align:center;">'
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:3px;">CADENCIA MAIS COMUM</div>'
-    +'<div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--cyan);">'+cadenciaMin+'m'+pad(cadenciaSegResto)+'s</div>'
-    +'</div>'
-    +'<div style="background:#0a1020;border:1px solid var(--blue)33;border-radius:9px;padding:8px;text-align:center;">'
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:3px;">MEDIA</div>'
-    +'<div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--text);">'+Math.floor(avgGap/60)+'m'+pad(Math.round(avgGap%60))+'s</div>'
-    +'</div>'
-    +'<div style="background:#0a1020;border:1px solid var(--blue)33;border-radius:9px;padding:8px;text-align:center;">'
-    +'<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:3px;">VARIACAO</div>'
-    +'<div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--dim2);">\xb1'+Math.round(stdGap)+'s</div>'
-    +'</div>'
-    +'</div>'
-    +'<div style="font-size:0.46rem;color:var(--dim2);line-height:1.6;background:#050a15;border-radius:8px;padding:7px 9px;">'
-    +'\ud83d\udca1 O jogo parece reiniciar a cada aprox. <b style="color:var(--cyan);">'+cadenciaMin+'m'+pad(cadenciaSegResto)+'s</b>. '
-    +'Com '+gaps.length+' intervalos analisados. Quanto mais dados, mais preciso.'
-    +'</div>';
-}
-
-function minProximoQuente(){
-  const el = document.getElementById('min-proximo');
-  if(!el) return;
-  const ev = minGetTodosEventos();
-  if(ev.length<5){ el.innerHTML='<div class="empty">Sem dados suficientes.</div>'; return; }
-
-  // Contar por minuto
-  const freq = {};
-  for(let i=0;i<60;i++) freq[i]=0;
-  ev.forEach(function(e){ const m=minGetMinuto(e.hora); if(m!==null) freq[m]++; });
-
-  const agoraMin = new Date().getMinutes();
-  const maxF = Math.max.apply(null,Object.values(freq).concat([1]));
-
-  // Encontrar os proximos 3 minutos quentes a partir de agora
-  const proximos = [];
-  for(let offset=1;offset<=59;offset++){
-    const m = (agoraMin+offset)%60;
-    if(freq[m]>0){
-      const pct = Math.round((freq[m]/maxF)*100);
-      proximos.push({minuto:m, cnt:freq[m], pct, offset});
-      if(proximos.length>=3) break;
-    }
-  }
-
-  if(!proximos.length){
-    el.innerHTML='<div class="empty">Nenhum minuto quente detetado no hist\xf3rico ainda.</div>';
-    return;
-  }
-
-  el.innerHTML = '<div style="font-size:0.48rem;color:var(--dim2);margin-bottom:8px;">Baseado no teu hist\xf3rico, os pr\xf3ximos minutos com eventos registados:</div>'
-    +proximos.map(function(p,i){
-      const cor = p.pct>=60?'#ef4444':p.pct>=40?'#fbbf24':'#4ade80';
-      const isNext = i===0;
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:'+(isNext?cor+'11':'var(--card2)')+';border:1px solid '+(isNext?cor+'55':'var(--border)')+';border-radius:10px;margin-bottom:6px;">'
-        +'<div style="text-align:center;min-width:50px;">'
-        +'<div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:'+cor+';">:'+pad(p.minuto)+'</div>'
-        +'<div style="font-size:0.42rem;color:var(--dim2);">em '+p.offset+'min</div>'
-        +'</div>'
-        +'<div style="flex:1;">'
-        +'<div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden;">'
-        +'<div style="width:'+p.pct+'%;height:100%;background:'+cor+';border-radius:6px;"></div>'
-        +'</div>'
-        +'<div style="font-size:0.44rem;color:var(--dim2);margin-top:2px;">'+p.cnt+'x registado historicamente ('+p.pct+'% do maximo)</div>'
-        +'</div>'
-        +(isNext?'<div style="font-size:0.8rem;">\ud83d\udd25</div>':'')
-        +'</div>';
-    }).join('')
-    +'<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;line-height:1.5;">\u26a0\ufe0f Frequ\xeancia hist\xf3rica n\xe3o garante repeti\xe7\xe3o \u2014 cada rodada \xe9 independente.</div>';
-}
-
 // =====================================================
 //  ANALISE TEMPORAL DE HORAS
 // =====================================================
@@ -15705,119 +15104,9 @@ function renderRadarDiaria(){
 // ══════════════════════════════════════════════
 //  MAPA DE COMPANHIA (chance de vir outra quadra em 30min)
 // ══════════════════════════════════════════════
-function renderMapaCompanhia(){
-  const el = document.getElementById('mapa-companhia');
-  if(!el) return;
-
-  const dupIdx = new Set(_encontrarDuplicados(S.quadras));
-  const unicos = S.quadras.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts && e.hora; });
-  if(unicos.length<20){
-    el.innerHTML = '<div class="empty">Ainda com poucos registos únicos para calcular isto com confiança.</div>';
-    return;
-  }
-
-  const porDia = {};
-  unicos.forEach(function(e){
-    const dk = _diaKey(e.ts);
-    if(!porDia[dk]) porDia[dk]=[];
-    porDia[dk].push({min:toMin(e.hora), hora:e.hora});
-  });
-
-  const totalPorHora = {}, hitPorHora = {};
-  Object.values(porDia).forEach(function(lst){
-    lst.sort(function(a,b){return a.min-b.min;});
-    for(let i=0;i<lst.length;i++){
-      const h = Math.floor(lst[i].min/60);
-      totalPorHora[h] = (totalPorHora[h]||0)+1;
-      if(i+1<lst.length && lst[i+1].min-lst[i].min<=30){
-        hitPorHora[h] = (hitPorHora[h]||0)+1;
-      }
-    }
-  });
-
-  // Ultima quadra registada (por ts mais recente)
-  const ultima = unicos.slice().sort(function(a,b){return b.ts-a.ts;})[0];
-  const hUltima = parseInt(ultima.hora.split(':')[0]);
-  const totH = totalPorHora[hUltima]||0;
-  const hitH = hitPorHora[hUltima]||0;
-  const pctH = totH>=5 ? Math.round(hitH/totH*100) : null;
-
-  const minutosDesde = Math.round((Date.now()-ultima.ts)/60000);
-
-  let html = '<div style="background:#0a0a14;border-radius:9px;padding:10px;font-size:0.5rem;color:var(--text);line-height:1.7;">';
-  html += 'Última quadra registada: <b style="color:var(--gold);">'+ultima.hora+'</b> (número '+ultima.num+').<br>';
-  if(pctH!==null){
-    const cor = pctH>=30?'#ef4444':(pctH>=20?'#fbbf24':'var(--green)');
-    html += 'Quadras às <b>'+pad(hUltima)+'h</b> têm, historicamente, <b style="color:'+cor+';">'+pctH+'%</b> de chance de vir outra dentro de 30min ('+hitH+' de '+totH+' vezes).<br>';
-    if(minutosDesde<=30){
-      html += '⏱ Já passaram <b>'+minutosDesde+' min</b> desde essa quadra — ainda dentro da janela de 30min. Fica atenta!';
-    } else {
-      html += '⏱ Já passaram '+minutosDesde+' min — a janela de 30min já se fechou sem repetir esta vez.';
-    }
-  } else {
-    html += 'Ainda sem amostra suficiente para essa hora especificamente (mínimo 5 dias).';
-  }
-  html += '</div>';
-  html += '<div style="font-size:0.42rem;color:var(--dim2);margin-top:6px;">⚠️ Baseado em padrões passados — não garante nada, é só probabilidade histórica.</div>';
-
-  el.innerHTML = html;
-}
-
 // ══════════════════════════════════════════════
 //  MAPA DE COMPANHIA - ULTIMOS 7 DIAS (clusters por dia)
 // ══════════════════════════════════════════════
-function renderMapaCompanhiaSemana(){
-  const el = document.getElementById('mapa-companhia-semana');
-  if(!el) return;
-
-  const dupIdx = new Set(_encontrarDuplicados(S.quadras));
-  const unicos = S.quadras.filter(function(_,i){ return !dupIdx.has(i); }).filter(function(e){ return e.ts && e.hora; });
-
-  const hoje0h = new Date(); hoje0h.setHours(0,0,0,0);
-  const dias = [];
-  for(let i=6;i>=0;i--){
-    const d = new Date(hoje0h); d.setDate(d.getDate()-i);
-    dias.push({label: pad(d.getDate())+'/'+pad(d.getMonth()+1), ts0h:d.getTime(), clusters:0});
-  }
-
-  const porDia = {};
-  unicos.forEach(function(e){
-    const e0h = new Date(e.ts); e0h.setHours(0,0,0,0);
-    const key = e0h.getTime();
-    if(!porDia[key]) porDia[key] = [];
-    porDia[key].push(toMin(e.hora));
-  });
-
-  let temDados = false;
-  dias.forEach(function(d){
-    const lst = (porDia[d.ts0h]||[]).slice().sort(function(a,b){return a-b;});
-    for(let i=1;i<lst.length;i++){
-      if(lst[i]-lst[i-1]<=30){ d.clusters++; temDados=true; }
-    }
-  });
-
-  if(!temDados){
-    el.innerHTML = '<div style="font-size:0.42rem;color:var(--dim2);">Sem "companhias" (quadras a ≤30min uma da outra) nos últimos 7 dias.</div>';
-    return;
-  }
-
-  const maxC = Math.max.apply(null, dias.map(function(d){return d.clusters;}).concat([1]));
-  let html = '<div style="font-size:0.44rem;color:var(--dim2);margin-bottom:5px;">🔗 Quantas "companhias" por dia — últimos 7 dias</div>';
-  html += '<div style="display:flex;align-items:flex-end;gap:3px;height:44px;margin-bottom:3px;">'
-    +dias.map(function(d){
-      const h = Math.max(3, Math.round(d.clusters/maxC*36));
-      const cor = d.clusters===0 ? '#1a3a2a' : (d.clusters>=maxC ? '#ef4444' : '#38bdf8');
-      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
-        +'<div style="font-size:0.32rem;color:var(--dim2);">'+(d.clusters||'')+'</div>'
-        +'<div style="width:100%;height:'+h+'px;background:'+cor+';border-radius:2px 2px 0 0;"></div>'
-        +'</div>';
-    }).join('')
-    +'</div>';
-  html += '<div style="display:flex;gap:3px;">'+dias.map(function(d){ return '<div style="flex:1;text-align:center;font-size:0.3rem;color:var(--dim2);">'+d.label+'</div>'; }).join('')+'</div>';
-  html += '<div style="font-size:0.4rem;color:var(--dim2);margin-top:4px;">💡 Se a barra variar muito de dia para dia, o cluster de 30min não é constante — é mais forte nuns dias que noutros.</div>';
-
-  el.innerHTML = html;
-}
 // ══════════════════════════════════════════════
 function renderCalendarioCiclos(){
   const el = document.getElementById('calendario-ciclos');
@@ -15895,13 +15184,10 @@ function renderHora(){
   safeRun(renderMapaRepeticao,'renderMapaRepeticao');
   safeRun(renderGatilhoTriploQuadra,'renderGatilhoTriploQuadra');
   safeRun(renderGatilhoMinuto,'renderGatilhoMinuto');
-  safeRun(renderSecaAntesQuadra,'renderSecaAntesQuadra');
   safeRun(renderCicloPorHora,'renderCicloPorHora');
   safeRun(renderContagemProvavel,'renderContagemProvavel');
   safeRun(renderValidadorPrevisoes,'renderValidadorPrevisoes');
   safeRun(renderRadarDiaria,'renderRadarDiaria');
-  safeRun(renderMapaCompanhia,'renderMapaCompanhia');
-  safeRun(renderMapaCompanhiaSemana,'renderMapaCompanhiaSemana');
   safeRun(renderCalendarioCiclos,'renderCalendarioCiclos');
   safeRun(renderAlertaCruzadoCiclos,'renderAlertaCruzadoCiclos');
 }
@@ -18499,28 +17785,6 @@ function _secaDeTriploAtiva(agoraMin){
   return {tempoDesdeTriplo, ratio, pct:s.pct};
 }
 
-function renderSecaAntesQuadra(){
-  const el = document.getElementById('seca-antes-quadra');
-  if(!el) return;
-  const s = calcSecaAntesQuadra();
-
-  if(s.total<5){
-    el.innerHTML = '<div class="empty">Precisa de pelo menos 5 quadras com hor\xe1rio registado (fora de dias at\xedpicos) para calcular isto. J\xe1 tens '+s.total+'.</div>';
-    return;
-  }
-
-  const cor = s.pct>=60?'#ef4444':s.pct>=40?'#fbbf24':'#4ade80';
-  el.innerHTML = '<div style="text-align:center;margin-bottom:6px;">'
-    +'<div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:'+cor+';">'+s.pct+'%</div>'
-    +'<div style="font-size:0.46rem;color:var(--dim2);">das quadras ca\xedram dentro de uma seca de triplo (\u22651.5x a m\xe9dia)</div>'
-    +(s.avgRatio!==null?'<div style="font-size:0.46rem;color:var(--dim2);margin-top:2px;">Intervalo m\xe9dio de triplo nessas ocasi\xf5es: <b style="color:var(--text);">'+s.avgRatio.toFixed(1)+'x</b> a m\xe9dia normal (base: '+s.total+' quadras)</div>':'')
-    +'</div>'
-    +'<div style="margin-top:6px;font-size:0.42rem;color:var(--dim2);line-height:1.5;">'
-    +'\ud83c\udf3e Quando uma seca de triplo j\xe1 vai al\xe9m de 1.5x a m\xe9dia, o Sniper reforça automaticamente a instru\xe7\xe3o da Quadra com este sinal.'
-    +'</div>';
-}
-
-
 // Verifica se o MINUTO ATUAL (não o próximo) já é historicamente forte —
 // usado para saber se estamos DENTRO da janela quente, não apenas perto dela.
 function _minutoAtualForte(arr, agora){
@@ -18944,7 +18208,8 @@ setInterval(function(){
 
 
 function renderAll(){
-  // ── Essencial: o que aparece logo no ecrã (Dashboard/Triplos/Quadras/Banca) ──
+  // ── Só o essencial corre automaticamente. A Análise/IA/Planeador/Turbo ──
+  // ── só calculam quando abres essa aba (ver goPage) — nunca sozinhos. ──
   safeRun(fecharEditModalSeAberto,'fecharEditModal-boot');
   safeRun(renderDashboard,'renderDashboard');
   safeRun(renderTriplos,'renderTriplos');
@@ -18955,22 +18220,26 @@ function renderAll(){
   safeRun(renderMeta,'renderMeta');
   safeRun(renderObjetivos,'renderObjetivos');  safeRun(()=>{ if(bancaState.configurada) renderBanca(); },'renderBanca'); safeRun(renderBancaMeta,'renderBancaMeta');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
+}
 
-  // ── Pesado: adiado para depois do ecrã estar visível, em lotes, para o telemóvel não travar/matar a página ──
-  setTimeout(()=>{
+// Cada aba pesada só calcula uma vez, na primeira vez que é aberta.
+const _abasPesadasCalculadas = {};
+function _renderAbaPesadaSeNecessario(id){
+  if(_abasPesadasCalculadas[id]) return;
+  _abasPesadasCalculadas[id] = true;
+  if(id==='padroes'){
     safeRun(renderPadroes,'renderPadroes');
-    safeRun(renderIAHistorico,'renderIAHistorico');
-  }, 60);
-  setTimeout(()=>{
-    safeRun(renderConquistas,'renderConquistas');
-    safeRun(renderPlaneador,'renderPlaneador');
     safeRun(renderCicloDetector,'renderCicloDetector');
-  }, 140);
-  setTimeout(()=>{
     safeRun(renderPrevisao,'renderPrevisao');
-    safeRun(renderTurboHist,'renderTurboHist');
     safeRun(renderMapaSequencias,'renderMapaSequencias');
-  }, 220);
+    safeRun(renderConquistas,'renderConquistas');
+  } else if(id==='ia'){
+    safeRun(renderIAHistorico,'renderIAHistorico');
+  } else if(id==='planeador'){
+    safeRun(renderPlaneador,'renderPlaneador');
+  } else if(id==='turbo'){
+    safeRun(renderTurboHist,'renderTurboHist');
+  }
 }
 // Versão só do essencial — usada antes do PIN estar confirmado, para o ecrã de bloqueio
 // nunca ficar a competir por memória com os cálculos pesados da Análise/IA.
