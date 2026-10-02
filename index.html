@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-151</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-153</div>
   </div>
 
   <!-- Display PIN -->
@@ -4484,8 +4484,8 @@ function renderSlots(slots, containerId, color='green', tipoLabel='TRIPLO'){
 function updateCountdowns(){
   updateBigCD(S.triplos,'t-big-cd','t-big-bar','t-big-cd-sub','t-big-countdown',false);
   updateBigCD(S.quadras,'q-big-cd','q-big-bar','q-big-cd-sub',null,true);
-  updateNumsProvaveis();
-  updateHoraInfo();
+  // updateNumsProvaveis/updateHoraInfo passaram para o relógio de 5s (verificacoesLeves) —
+  // não precisam de recalcular sobre os 15 mil+ registos a cada segundo, só a cada 5s.
 }
 
 function updateBigCD(arr, cdId, barId, subId, wrapId, isGold){
@@ -18262,6 +18262,8 @@ function renderEssencialPreBoot(){
 }
 function verificacoesLeves(){
   // Estes são leves (verificações, não reconstroem listas grandes) — mantidos sempre a correr para os alertas funcionarem em qualquer página
+  safeRun(updateNumsProvaveis,'updateNumsProvaveis');
+  safeRun(updateHoraInfo,'updateHoraInfo');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
   safeRun(checkConquistas,'checkConquistas');
   safeRun(checkAlertaTermometro,'checkAlertaTermometro');
@@ -18283,11 +18285,9 @@ setInterval(()=>{
   if(ativa('page-dashboard')) safeRun(renderDashboard,'renderDashboard');
   if(ativa('page-triplos')) safeRun(renderTriplos,'renderTriplos');
   if(ativa('page-quadras')) safeRun(renderQuadras,'renderQuadras');
-  if(ativa('page-padroes')){
-    safeRun(renderPadroes,'renderPadroes');
-    safeRun(renderCicloDetector,'renderCicloDetector');
-    safeRun(renderPrevisao,'renderPrevisao');
-  }
+  // A aba Análise já calcula tudo ao abrir (ver goPage/_renderAbaPesadaSeNecessario,
+  // feito em lotes faseados) — não voltamos a recalcular tudo aqui a cada 5s,
+  // porque isso era o que estava a travar o telemóvel passado algum tempo na aba.
   if(ativa('page-turbo')) safeRun(renderTurboHist,'renderTurboHist');
   if(ativa('page-planeador')) safeRun(renderPlaneador,'renderPlaneador');
   verificacoesLeves();
