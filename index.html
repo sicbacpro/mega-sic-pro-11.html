@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-150</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-151</div>
   </div>
 
   <!-- Display PIN -->
@@ -9029,23 +9029,31 @@ function initChecklistSinais(){
 }
 
 function renderPadroes(){
+  // Dividido em lotes pequenos (setTimeout) para o telemóvel não travar
+  // ao calcular tudo de uma vez na primeira abertura da aba.
   renderHeatmap();
-  renderStreaks();
-  renderVisaoProfunda();
-  safeRun(renderRelatorioSemanal,'renderRelatorioSemanal');
-  safeRun(renderHorasSemanaAtual,'renderHorasSemanaAtual');
-  safeRun(renderMudancaPadrao,'renderMudancaPadrao');
-  safeRun(renderRotacaoHoras,'renderRotacaoHoras');
-  safeRun(renderSemanaIdeal,'renderSemanaIdeal');
-  safeRun(renderSemanaFraca,'renderSemanaFraca');
-  safeRun(renderSequenciasLongas,'renderSequenciasLongas');
-  safeRun(renderPadraoMes,'renderPadraoMes');
   safeRun(renderResumoHoje,'renderResumoHoje');
   safeRun(renderTermometroDia,'renderTermometroDia');
-  safeRun(renderVelocidadeRecuperacao,'renderVelocidadeRecuperacao');
-  safeRun(renderCruzamentoSinais,'renderCruzamentoSinais');
-  safeRun(renderSessaoGemea,'renderSessaoGemea');
-  safeRun(function(){ if(typeof window.cpSugerirPadroes==='function') window.cpSugerirPadroes(); },'cpSugerirPadroes-auto');
+  setTimeout(()=>{
+    safeRun(renderStreaks,'renderStreaks');
+    safeRun(renderRelatorioSemanal,'renderRelatorioSemanal');
+    safeRun(renderHorasSemanaAtual,'renderHorasSemanaAtual');
+    safeRun(renderMudancaPadrao,'renderMudancaPadrao');
+  }, 60);
+  setTimeout(()=>{
+    safeRun(renderVisaoProfunda,'renderVisaoProfunda');
+    safeRun(renderRotacaoHoras,'renderRotacaoHoras');
+    safeRun(renderSemanaIdeal,'renderSemanaIdeal');
+    safeRun(renderSemanaFraca,'renderSemanaFraca');
+  }, 140);
+  setTimeout(()=>{
+    safeRun(renderSequenciasLongas,'renderSequenciasLongas');
+    safeRun(renderPadraoMes,'renderPadraoMes');
+    safeRun(renderVelocidadeRecuperacao,'renderVelocidadeRecuperacao');
+    safeRun(renderCruzamentoSinais,'renderCruzamentoSinais');
+    safeRun(renderSessaoGemea,'renderSessaoGemea');
+    safeRun(function(){ if(typeof window.cpSugerirPadroes==='function') window.cpSugerirPadroes(); },'cpSugerirPadroes-auto');
+  }, 220);
 }
 
 // ══════════════════════════════════════════════
@@ -18229,10 +18237,14 @@ function _renderAbaPesadaSeNecessario(id){
   _abasPesadasCalculadas[id] = true;
   if(id==='padroes'){
     safeRun(renderPadroes,'renderPadroes');
-    safeRun(renderCicloDetector,'renderCicloDetector');
-    safeRun(renderPrevisao,'renderPrevisao');
-    safeRun(renderMapaSequencias,'renderMapaSequencias');
-    safeRun(renderConquistas,'renderConquistas');
+    setTimeout(()=>{
+      safeRun(renderCicloDetector,'renderCicloDetector');
+      safeRun(renderPrevisao,'renderPrevisao');
+    }, 300);
+    setTimeout(()=>{
+      safeRun(renderMapaSequencias,'renderMapaSequencias');
+      safeRun(renderConquistas,'renderConquistas');
+    }, 400);
   } else if(id==='ia'){
     safeRun(renderIAHistorico,'renderIAHistorico');
   } else if(id==='planeador'){
