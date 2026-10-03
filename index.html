@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-153</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-154</div>
   </div>
 
   <!-- Display PIN -->
@@ -1621,33 +1621,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="sessao-gemea" style="padding:8px;"></div>
   </div>
 
-  <!-- EXPLOSAO NOTURNA -->
-  <div class="card" style="border-color:#1a1a4a;margin-bottom:10px;background:linear-gradient(135deg,#0a0a1e,#080818);">
-    <div class="ch" style="border-color:#1a1a4a;">
-      <div class="ci" style="background:#0a0a20;">🌙</div>
-      <div><div class="ct" style="color:#818cf8;">Explosão Noturna</div><div class="cs">Manhã seca costuma compensar à noite?</div></div>
-    </div>
-    <div id="explosao-noturna" style="padding:8px;"></div>
-  </div>
-
-  <!-- ASSISTENTE "ONDE ESTOU?" -->
-  <div class="card" style="border-color:#1a3a4a;margin-bottom:10px;background:linear-gradient(135deg,#050e14,#081018);">
-    <div class="ch" style="border-color:#1a3a4a;">
-      <div class="ci" style="background:#031015;">🧭</div>
-      <div><div class="ct" style="color:var(--cyan);">Onde Estou?</div><div class="cs">Resumo rápido do momento — sem teres de abrir vários cartões</div></div>
-    </div>
-    <div id="onde-estou" style="padding:8px;"></div>
-  </div>
-
-  <!-- COMPARADOR CABEÇA-A-CABEÇA -->
-  <div class="card" style="border-color:#2a2a1a;margin-bottom:10px;background:linear-gradient(135deg,#0e0e08,#14140a);">
-    <div class="ch" style="border-color:#2a2a1a;">
-      <div class="ci" style="background:#141005;">⚔️</div>
-      <div><div class="ct" style="color:#e0e070;">Comparador Cabeça-a-Cabeça</div><div class="cs">Triplo vs Quadra — o que está mais quente agora</div></div>
-    </div>
-    <div id="comparador-cc" style="padding:8px;"></div>
-  </div>
-
   <!-- CHECKLIST DE LEITURA DE SINAIS -->
   <div class="card" id="checklist-sinais-card" style="border-color:#3a2a4a;margin-bottom:10px;background:linear-gradient(135deg,#0e0a18,#120a1e);">
     <div class="ch" style="border-color:#3a2a4a;cursor:pointer;" onclick="toggleChecklistSinais()">
@@ -1756,24 +1729,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div id="seq-visual" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 0;"></div>
 
     </div>
-  </div>
-
-  <!-- HEATMAP DO MÊS -->
-  <div class="card" style="border-color:#1a3a2a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#1a3a2a;">
-      <div class="ci" style="background:#031a10;">🗓️</div>
-      <div><div class="ct" style="color:var(--green);">Heatmap do Mês</div><div class="cs">Intensidade de Triplos + Quadras, dia a dia</div></div>
-    </div>
-    <div id="heatmap-mes" style="padding:8px;"></div>
-  </div>
-
-  <!-- RADAR DE CONVERGÊNCIA DOS NÚMEROS -->
-  <div class="card" style="border-color:#3a2a08;margin-bottom:10px;">
-    <div class="ch" style="border-color:#3a2a08;">
-      <div class="ci" style="background:#1a1004;">🎯</div>
-      <div><div class="ct" style="color:#fbbf24;">Radar de Convergência</div><div class="cs">Que números se destacam nos dois — Triplos e Quadras</div></div>
-    </div>
-    <div id="radar-convergencia" style="padding:8px;"></div>
   </div>
 
   <!-- HISTORICO DE STREAKS -->
@@ -1957,26 +1912,6 @@ textarea:focus{border-color:var(--green)!important;}
     <div id="minutos-vizinhos" style="padding:8px;"></div>
   </div>
 
-  <!-- CADENCIA DO JOGO -->
-  <div class="card" style="border-color:#1a2a3a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#1a2a3a;">
-      <div class="ci" style="background:#050a18;">🔁</div>
-      <div><div class="ct" style="color:var(--blue);">Cadência do Jogo</div><div class="cs">🔁 Intervalo de reinício da rodada (não é o mesmo que "Ritmo")</div></div>
-    </div>
-    <div id="min-cadencia" style="padding:8px;"></div>
-    <div style="padding:0 8px 8px;font-size:0.42rem;color:var(--dim2);">Isto é o tempo entre rodadas do jogo. Para a tendência de aceleração de Triplos/Quadras → <span onclick="irParaSubAbaAnalise('profunda')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Profunda</span>.</div>
-  </div>
-
-  <!-- PROXIMO MINUTO QUENTE -->
-  <div class="card" style="border-color:#3a1a0a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#3a1a0a;">
-      <div class="ci" style="background:#180a04;">🔥</div>
-      <div><div class="ct" style="color:var(--orange);">Próximo Minuto Quente</div><div class="cs">⏱ Visão do minuto — dentro da hora atual</div></div>
-    </div>
-    <div id="min-proximo" style="padding:8px;"></div>
-    <div style="padding:0 8px 8px;font-size:0.42rem;color:var(--dim2);">Isto é o minuto certo dentro desta hora. Para saber qual é a próxima hora quente → <span onclick="irParaSubAbaAnalise('hora')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Por Hora</span>. Para o dia de amanhã → <span onclick="irParaSubAbaAnalise('previsao')" style="color:var(--cyan);text-decoration:underline;cursor:pointer;">Previsão</span>.</div>
-  </div>
-
   <!-- MINUTOS POR TIPO -->
   <div class="card" style="border-color:#1a3a1a;margin-bottom:10px;">
     <div class="ch" style="border-color:#1a3a1a;">
@@ -2001,16 +1936,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:var(--gold);">Radar da Hora Diária</div><div class="cs">A hora mais "fiel" — repete quase todos os dias</div></div>
     </div>
     <div id="radar-diaria" style="padding:8px;"></div>
-  </div>
-
-  <!-- MAPA DE COMPANHIA -->
-  <div class="card" style="border-color:#0a3a2a;margin-bottom:10px;background:linear-gradient(135deg,#04140c,#04100a);">
-    <div class="ch" style="border-color:#0a3a2a;">
-      <div class="ci" style="background:#04140c;">👥</div>
-      <div><div class="ct" style="color:#34d399;">Mapa de Companhia</div><div class="cs">Depois desta quadra, qual a chance de vir outra em 30min?</div></div>
-    </div>
-    <div id="mapa-companhia" style="padding:8px;"></div>
-    <div id="mapa-companhia-semana" style="padding:0 8px 8px;"></div>
   </div>
 
   <!-- DETECTOR DE CICLO POR HORA -->
@@ -2113,15 +2038,6 @@ textarea:focus{border-color:var(--green)!important;}
       <div><div class="ct" style="color:#e879f9;">Gatilho ao Minuto</div><div class="cs">O minuto exato do triplo influencia quão rápido vem a quadra?</div></div>
     </div>
     <div id="gatilho-minuto" style="padding:8px;"></div>
-  </div>
-
-  <!-- SECA DE TRIPLO → QUADRA -->
-  <div class="card" style="border-color:#1a3a1a;margin-bottom:10px;">
-    <div class="ch" style="border-color:#1a3a1a;">
-      <div class="ci" style="background:#051505;">🌾</div>
-      <div><div class="ct" style="color:#4ade80;">Seca de Triplo → Quadra</div><div class="cs">As quadras tendem a sair durante secas de triplo?</div></div>
-    </div>
-    <div id="seca-antes-quadra" style="padding:8px;"></div>
   </div>
 
   <!-- MAPA DE HORAS -->
@@ -3283,6 +3199,21 @@ textarea:focus{border-color:var(--green)!important;}
 </div><!-- /pages -->
 
 <script>
+// ══════════════════════════════════════════════
+//  DIAGNÓSTICO: se a app travou a meio de algo na última vez, mostra o quê
+// ══════════════════════════════════════════════
+(function(){
+  try{
+    const etapa = localStorage.getItem('pro_debug_etapa');
+    if(etapa){
+      const b = document.createElement('div');
+      b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#3a0a0a;color:#ffb4b4;padding:14px 16px;font-family:monospace;font-size:13px;line-height:1.6;border-bottom:2px solid #ff4444;';
+      b.innerHTML = '⚠️ A app travou da última vez a calcular: <b>'+etapa+'</b><br><span style="font-size:11px;opacity:0.8;">Tira um print e envia isto ao Claude. Toca aqui para limpar e continuar.</span>';
+      b.onclick = function(){ localStorage.removeItem('pro_debug_etapa'); b.remove(); };
+      document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(b); });
+    }
+  }catch(e){}
+})();
 // ══════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════
@@ -10460,12 +10391,25 @@ function vpDensidade(){
   el.innerHTML = html;
 }
 
+// buildTimeline() é pesada (junta e ordena ~16 mil eventos) e vários cards chamam-na
+// cada um por sua conta — por isso guardamos o resultado por 3s e reaproveitamos,
+// em vez de recalcular do zero de cada vez que um card precisa dela.
+let _timelineCache = null, _timelineCacheTs = 0;
 function buildTimeline(){
+  const agora = Date.now();
+  if(_timelineCache && (agora-_timelineCacheTs)<3000) return _timelineCache;
   const events = [];
   S.triplos.forEach(e=>events.push(Object.assign({},e,{tipo:'T',corOriginal:e.cor||null,cor:'#4ade80'})));
   S.quadras.forEach(e=>events.push(Object.assign({},e,{tipo:'Q',corOriginal:e.cor||null,cor:'#fbbf24'})));
   S.duplos.forEach(e=>events.push(Object.assign({},e,{tipo:'D',corOriginal:e.cor||null,cor:'#c084fc',num:(e.pairs&&e.pairs[0])||null,dados:e.dice||e.dados||[]})));
-  return events.filter(e=>e.hora).sort((a,b)=>toMin(b.hora)-toMin(a.hora));
+  // Pré-computa os minutos de cada evento uma única vez antes de ordenar,
+  // em vez de o sort chamar toMin() repetidamente (milhares de vezes a mais).
+  const comHora = events.filter(e=>e.hora);
+  comHora.forEach(e=>{ e._min = toMin(e.hora); });
+  comHora.sort((a,b)=>b._min-a._min);
+  const result = comHora;
+  _timelineCache = result; _timelineCacheTs = agora;
+  return result;
 }
 
 function vpRitmo(){
@@ -10504,10 +10448,13 @@ function vpRitmo(){
   }).join('');
   let tqRows = '';
   if(S.triplos.length>=2&&S.quadras.length>=1){
+    const triplosMin = S.triplos.map(function(t){return toMin(t.hora);});
     const tqGaps = [];
     S.quadras.forEach(function(q){
-      const ant = S.triplos.find(function(t){return toMin(t.hora)<toMin(q.hora);});
-      if(ant){ const g=toMin(q.hora)-toMin(ant.hora); if(g>0&&g<120) tqGaps.push(g); }
+      const qMin = toMin(q.hora);
+      let antMin = null;
+      for(let i=0;i<triplosMin.length;i++){ if(triplosMin[i]<qMin){ antMin=triplosMin[i]; break; } }
+      if(antMin!=null){ const g=qMin-antMin; if(g>0&&g<120) tqGaps.push(g); }
     });
     if(tqGaps.length>=2){
       const avg = (tqGaps.reduce(function(a,b){return a+b;},0)/tqGaps.length).toFixed(1);
@@ -12620,7 +12567,11 @@ const saveCores = () => localStorage.setItem('pro_cores', JSON.stringify(coresSt
 //  RENDER ALL
 // ══════════════════════════════════════════════
 function safeRun(fn, name){
-  try { fn(); } catch(e) { console.error('Erro em '+name+':', e); }
+  try {
+    localStorage.setItem('pro_debug_etapa', name);
+    fn();
+    localStorage.removeItem('pro_debug_etapa');
+  } catch(e) { console.error('Erro em '+name+':', e); }
 }
 
 // =====================================
@@ -13045,10 +12996,13 @@ function vpRitmoAvancado(){
 
   let tqRows = '';
   if(S.triplos.length>=2&&S.quadras.length>=1){
+    const triplosMin = S.triplos.map(function(t){return toMin(t.hora);});
     const tqGaps=[];
     S.quadras.forEach(function(q){
-      const ant=S.triplos.find(function(t){return toMin(t.hora)<toMin(q.hora);});
-      if(ant){ const g=toMin(q.hora)-toMin(ant.hora); if(g>0&&g<120) tqGaps.push(g); }
+      const qMin = toMin(q.hora);
+      let antMin = null;
+      for(let i=0;i<triplosMin.length;i++){ if(triplosMin[i]<qMin){ antMin=triplosMin[i]; break; } }
+      if(antMin!=null){ const g=qMin-antMin; if(g>0&&g<120) tqGaps.push(g); }
     });
     if(tqGaps.length>=2){
       const avg=(tqGaps.reduce(function(a,b){return a+b;},0)/tqGaps.length).toFixed(1);
