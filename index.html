@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-154</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-155</div>
   </div>
 
   <!-- Display PIN -->
@@ -12205,20 +12205,18 @@ function renderMapaSequencias(){
       </div>`).join('');
   }
 
-  // Cadeias de 3+
+  // Cadeias de 3+ (janela deslizante de 3 em 3 — antes isto acumulava o histórico
+  // inteiro numa lista só, sem nunca reiniciar, e crescia até aos 15 mil elementos:
+  // era isso que estava a travar a app)
   if(cadeias){
-    const chains=[];
-    let cur=[arr[arr.length-1]?.num];
-    for(let i=arr.length-2;i>=0;i--){
-      cur.push(arr[i].num);
-      if(cur.length>=3){
-        const key=cur.join('→');
-        const existing=chains.find(c=>c.key===key);
-        if(existing) existing.count++;
-        else chains.push({key,nums:[...cur],count:1});
-      }
+    const chainMap={};
+    for(let i=arr.length-1;i>=2;i--){
+      const nums=[arr[i].num,arr[i-1].num,arr[i-2].num];
+      const key=nums.join('→');
+      if(chainMap[key]) chainMap[key].count++;
+      else chainMap[key]={key,nums,count:1};
     }
-    const topChains=chains.sort((a,b)=>b.count-a.count).slice(0,6);
+    const topChains=Object.values(chainMap).sort((a,b)=>b.count-a.count).slice(0,6);
     cadeias.innerHTML=topChains.length?topChains.map(ch=>`
       <div class="cadeia-item">
         ${ch.nums.map((n,i)=>`
