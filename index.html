@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-155</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-156</div>
   </div>
 
   <!-- Display PIN -->
@@ -614,6 +614,9 @@ textarea:focus{border-color:var(--green)!important;}
 
   <!-- BOTAO DE EMERGENCIA - SILENCIO TOTAL -->
   <button data-essencial="1" onclick="silencioTotal()" style="width:100%;padding:11px;margin-bottom:10px;border-radius:12px;background:#2a0a0a;border:2px solid #ef4444;color:#ef4444;font-size:0.6rem;font-weight:700;cursor:pointer;">🔇 SILÊNCIO TOTAL (corta tudo agora)</button>
+
+  <!-- LEMBRETE DE BACKUP -->
+  <div class="card" id="lembrete-backup" data-essencial="1" style="display:none;margin-bottom:10px;border-color:#3a2a08;background:#1a1004;padding:10px;"></div>
 
   <!-- BOLETIM DE AMANHÃ -->
   <div class="card" id="sec-boletim-amanha" data-essencial="1" style="margin-bottom:10px;border-color:#0a3a2a;">
@@ -5056,6 +5059,55 @@ function exportJSON(){
   a.download=`sicbac-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   showToast('💾 JSON exportado!','green');
+  try{ localStorage.setItem('pro_ultimo_backup', String(Date.now())); }catch(e){}
+  safeRun(renderLembreteBackup,'renderLembreteBackup');
+}
+
+// ── LEMBRETE DE BACKUP ──────────────────────────────────
+// Limpar dados/cache do Chrome apaga tudo o que está em localStorage, sem aviso
+// e sem forma de recuperar. Isto já aconteceu uma vez. Este lembrete não deixa
+// passar mais de 3 dias sem um export, e não é possível adiar para sempre —
+// o botão "mais tarde" só adia até ao dia seguinte.
+const BACKUP_INTERVALO_DIAS = 3;
+function _diasDesdeUltimoBackup(){
+  let ts;
+  try{ ts = parseInt(localStorage.getItem('pro_ultimo_backup')||'0'); }catch(e){ ts=0; }
+  if(!ts) return Infinity;
+  return (Date.now()-ts)/(1000*60*60*24);
+}
+function adiarLembreteBackup(){
+  try{ localStorage.setItem('pro_backup_adiado_ate', String(Date.now()+24*60*60*1000)); }catch(e){}
+  renderLembreteBackup();
+}
+function renderLembreteBackup(){
+  const el = document.getElementById('lembrete-backup');
+  if(!el) return;
+  const dias = _diasDesdeUltimoBackup();
+  let adiadoAte = 0;
+  try{ adiadoAte = parseInt(localStorage.getItem('pro_backup_adiado_ate')||'0'); }catch(e){}
+  const adiado = adiadoAte && Date.now()<adiadoAte;
+  if(dias < BACKUP_INTERVALO_DIAS || adiado){
+    el.style.display='none';
+    return;
+  }
+  const semBackupNunca = dias===Infinity;
+  el.style.display='block';
+  el.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:8px;">
+      <div style="font-size:1.1rem;">💾</div>
+      <div style="flex:1;">
+        <div style="font-size:0.58rem;font-weight:700;color:var(--gold);margin-bottom:3px;">
+          ${semBackupNunca?'Nunca fizeste um backup':'Já passaram '+Math.floor(dias)+' dias sem backup'}
+        </div>
+        <div style="font-size:0.5rem;color:var(--dim2);line-height:1.5;margin-bottom:8px;">
+          Os teus dados estão só neste telemóvel. Limpar dados do Chrome, trocar de telemóvel ou uma falha do Android apaga tudo sem aviso — já aconteceu uma vez.
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm" style="background:#0a1a10;border:1px solid #00e67644;color:var(--green);flex:1;" onclick="exportJSON()">💾 Exportar agora</button>
+          <button class="btn btn-sm" style="background:transparent;border:1px solid var(--border);color:var(--dim2);" onclick="adiarLembreteBackup()">Amanhã</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 // =====================================
@@ -18172,6 +18224,7 @@ function renderAll(){
   // ── só calculam quando abres essa aba (ver goPage) — nunca sozinhos. ──
   safeRun(fecharEditModalSeAberto,'fecharEditModal-boot');
   safeRun(renderDashboard,'renderDashboard');
+  safeRun(renderLembreteBackup,'renderLembreteBackup');
   safeRun(renderTriplos,'renderTriplos');
   safeRun(renderQuadras,'renderQuadras');
   safeRun(renderDuplos,'renderDuplos');
@@ -18210,6 +18263,7 @@ function _renderAbaPesadaSeNecessario(id){
 function renderEssencialPreBoot(){
   safeRun(fecharEditModalSeAberto,'fecharEditModal-boot');
   safeRun(renderDashboard,'renderDashboard');
+  safeRun(renderLembreteBackup,'renderLembreteBackup');
   safeRun(checkPatternAlerts,'checkPatternAlerts');
 }
 function verificacoesLeves(){
