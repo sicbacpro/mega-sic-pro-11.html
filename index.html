@@ -461,7 +461,7 @@ textarea:focus{border-color:var(--green)!important;}
     <div style="font-size:3rem;margin-bottom:10px;">🎲</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#eef4f0;letter-spacing:0.1em;">MEGA SIC BAC</div>
     <div style="font-size:0.6rem;color:#4a5e58;letter-spacing:0.2em;margin-top:4px;">PRO · ACESSO PRIVADO</div>
-    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-156</div>
+    <div style="font-size:0.5rem;color:#00e676;letter-spacing:0.15em;margin-top:6px;font-family:var(--font-mono);">v10-157</div>
   </div>
 
   <!-- Display PIN -->
@@ -5630,6 +5630,7 @@ let imgFloatIndex = 0;
 function processImageFile(file){
   if(currentImages.length>=MAX_IMAGENS_IMPORT){ showToast('⚠ Máximo de '+MAX_IMAGENS_IMPORT+' imagens de cada vez.','warn'); return; }
   const reader = new FileReader();
+  reader.onerror = () => { showToast('⚠ Não consegui ler essa imagem. Tenta outra vez.','red'); };
   reader.onload = e => {
     const dataUrl = e.target.result;
     currentImages.push({ b64:dataUrl.split(',')[1], type:file.type||'image/jpeg', dataUrl:dataUrl });
@@ -5753,10 +5754,22 @@ async function analyzeImage(){
   });
   const multiplasImagens = currentImages.length>1;
 
+  // Com ligação instável, o pedido pode ficar pendurado para sempre sem isto —
+  // ao fim de 50s desistimos e mostramos erro, em vez de ficar "a carregar" eternamente.
+  // Duas redes de segurança independentes: o AbortController (cancela o pedido em
+  // si) E uma promessa de timeout à parte (garante que saímos do "a carregar" mesmo
+  // que o telemóvel, com sinal fraco, não processe o cancelamento do fetch a tempo).
+  const abortCtrl = new AbortController();
+  const timeoutId = setTimeout(()=>abortCtrl.abort(), 50000);
+  const timeoutIndependente = new Promise((_,reject)=>{
+    setTimeout(()=>reject(new Error('TIMEOUT_INDEPENDENTE')), 52000);
+  });
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await Promise.race([fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: abortCtrl.signal,
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 2500,
@@ -5806,9 +5819,13 @@ Responde APENAS com JSON válido, sem markdown, sem texto extra:
           ]
         }]
       })
-    });
+    }), timeoutIndependente]);
 
     clearInterval(loadInterval);
+    clearTimeout(timeoutId);
+    if(!response.ok){
+      throw new Error('O servidor respondeu com erro ('+response.status+'). Tenta novamente.');
+    }
     const data = await response.json();
     const text = data.content?.map(c=>c.text||'').join('') || '';
 
@@ -5823,16 +5840,26 @@ Responde APENAS com JSON válido, sem markdown, sem texto extra:
     }
 
     importedResults = parsed;
+    clearInterval(loadInterval);
+    clearTimeout(timeoutId);
     showImportResults(parsed);
 
   } catch(err) {
     clearInterval(loadInterval);
-    showToast('⚠ Erro na análise: '+err.message,'red');
+    clearTimeout(timeoutId);
+    const msg = (err.name==='AbortError' || err.message==='TIMEOUT_INDEPENDENTE')
+      ? 'A ligação demorou demasiado (mais de 50s) e foi cancelada. Tenta novamente — se tiveres pouco sinal, experimenta com menos imagens de cada vez.'
+      : err.message;
+    showToast('⚠ Erro na análise: '+msg,'red');
     console.error(err);
   }
 
-  document.getElementById('ai-loading').style.display='none';
-  document.getElementById('analyze-btn').disabled=false;
+  // Isto tem de correr SEMPRE, aconteça o que acontecer acima — por isso fica
+  // no seu próprio try/catch, para um erro aqui nunca deixar o ecrã preso em "a carregar".
+  try {
+    document.getElementById('ai-loading').style.display='none';
+    document.getElementById('analyze-btn').disabled=false;
+  } catch(e){ console.error('Erro ao repor o ecrã de carregamento:', e); }
 }
 
 function showImportResults(data){
@@ -11630,15 +11657,19 @@ Inclui:
 
 Responde APENAS com o texto dos 3-4 parágrafos, sem títulos, sem markdown.`;
 
+    const abortCtrl2 = new AbortController();
+    const timeoutId2 = setTimeout(()=>abortCtrl2.abort(), 20000);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
+      signal: abortCtrl2.signal,
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:400,
         messages:[{role:'user',content:prompt}]
       })
     });
+    clearTimeout(timeoutId2);
     const data = await response.json();
     return data.content?.[0]?.text || gerarComentarioLocal(rel);
   } catch(e) {
